@@ -6,7 +6,10 @@ import type { Adapter, IAdapter } from "../types/adapter.types";
 import type { IResult } from "../types/result.types";
 import type { UID } from "../types/uid.types";
 import type { AnyObject } from "../types/utils.types";
-import type { IValueObjectSettings } from "../types/value-object.types";
+import type {
+	IValueObjectSettings,
+	ValueObjectConstructor,
+} from "../types/value-object.types";
 import { DeepFreeze, StableStringify } from "../utils/object.utils";
 
 /**
@@ -120,6 +123,7 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @returns `true` if both value objects are structurally equal; `false` otherwise.
 	 */
 	public isEqual(other: this): boolean {
+		if (!other || other.__kind !== this.__kind) return false;
 		const props = this.props;
 		const otherProps = other?.props;
 
@@ -194,7 +198,9 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * const dto = money.toObject(new MoneyDtoAdapter());
 	 * ```
 	 */
-	public toObject<T>(adapter?: Adapter<this, T> | IAdapter<this, T>): unknown {
+	public toObject<T = Props>(
+		adapter?: Adapter<this, T> | IAdapter<this, T>,
+	): Readonly<T> {
 		if (
 			adapter &&
 			typeof (adapter as Adapter<this, T>).adaptOne === "function"
@@ -204,7 +210,13 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 		if (adapter && typeof (adapter as IAdapter<this, T>).build === "function") {
 			return (adapter as IAdapter<this, T>).build(this).value();
 		}
-		return DeepFreeze(this.autoMapper.valueObjectToObj(this) as object);
+
+		const mapped = this.autoMapper.valueObjectToObj(this);
+		if (typeof mapped === "object" && mapped !== null) {
+			return DeepFreeze(mapped) as Readonly<T>;
+		}
+
+		return mapped as Readonly<T>;
 	}
 
 	/**
@@ -226,12 +238,15 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * }
 	 * ```
 	 */
-	public static create(props: unknown): IResult<unknown, string> {
+	public static create<Props, T extends ValueObject<Props>>(
+		this: ValueObjectConstructor<Props, T>,
+		props: Props,
+	): IResult<T> {
 		// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
 		if (!this.isValidProps(props)) {
 			return Result.error(
-				// biome-ignore lint/complexity/noThisInStatic: Error messages should name the concrete subclass.
-				`Invalid props to create an instance of ${this.name}.`,
+				// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
+				`Invalid props for ${this.name}: failed domain validation.`,
 			);
 		}
 		return Result.success(new this(props));
@@ -249,10 +264,17 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @returns A new instance of this value object subclass.
 	 * @throws {DomainError} If `isValidProps()` returns `false`.
 	 */
-	public static init(_props: unknown): ValueObject<unknown> {
-		throw new DomainError(
-			`${ValueObject.name}.init() is not implemented. Override this method in your subclass.`,
-		);
+	public static init<Props, T extends ValueObject<Props>>(
+		this: ValueObjectConstructor<Props, T>,
+		props: Props,
+	): T {
+		// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
+		if (!this.isValidProps(props)) {
+			// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
+			throw new DomainError(`Invalid props to initialize ${this.name}.`);
+		}
+
+		return new this(props);
 	}
 
 	/**
