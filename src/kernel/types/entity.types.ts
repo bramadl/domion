@@ -1,15 +1,30 @@
-import type { AnyObject } from "./utils.types";
+import type { UID } from "./uid.types";
 
 /**
  * @description
- * Represents the base shape of an entity's properties.
- * All entity props must be a plain object, optionally containing
- * identity and lifecycle metadata fields.
+ * Merges user-defined `Props` with the implicit Entity lifecycle fields.
  */
-export type IEntityProps = AnyObject & {
-	id?: string;
+export type EntityProps<T extends object> = T & {
+	id?: string | number | UID<string>;
 	createdAt?: Date;
 	updatedAt?: Date;
+};
+
+/**
+ * @description
+ * Represents the base constraint for an entity's user-defined properties.
+ * Must be a plain object (no primitives, arrays, or class instances).
+ */
+export type IEntityProps = object;
+
+/**
+ * @description
+ * Represents the static side (constructor + factory contract) of an `Entity` subclass.
+ */
+export type EntityConstructor<Props extends object, T> = {
+	isValidProps(props: Props): boolean;
+	readonly name: string;
+	prototype: T;
 };
 
 /**

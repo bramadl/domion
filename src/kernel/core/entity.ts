@@ -1,13 +1,22 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: TS cannot model private constructors with generic static factories. */
+/** biome-ignore-all lint/complexity/noThisInStatic: Required for polymorphic `this` in base factory (DDD pattern). */
+
 import { AutoMapper } from "../helpers/auto-mapper";
 import { DomainError } from "../helpers/domain-error";
 import { GettersAndSetters } from "../helpers/getters-setters";
 import { Result } from "../libs/result";
 import type { Adapter, IAdapter } from "../types/adapter.types";
-import type { IEntityProps, IEntitySettings } from "../types/entity.types";
+import type {
+	EntityConstructor,
+	EntityProps,
+	IEntityProps,
+	IEntitySettings,
+} from "../types/entity.types";
 import type { IResult } from "../types/result.types";
 import type { UID } from "../types/uid.types";
 import type { AnyObject } from "../types/utils.types";
 import { DeepFreeze, StableStringify } from "../utils/object.utils";
+import { InvalidPropsType } from "../utils/type.utils";
 import { ID } from "./id";
 
 /**
@@ -16,7 +25,8 @@ import { ID } from "./id";
  *
  * Unlike value objects, two entities are not equal simply because their properties match.
  * Identity is determined by the `id` field. Two entities are equal only when they share
- * the same `id` AND the same property values (excluding lifecycle timestamps).
+ * the same `id` AND belong to the same class AND share the same property values
+ * (excluding lifecycle timestamps).
  *
  * Entities automatically track `createdAt` and `updatedAt` timestamps. Mutations via
  * `set().to()` or `change()` automatically refresh `updatedAt`.
@@ -27,25 +37,35 @@ import { ID } from "./id";
  * - Use `create()` as the sole public factory — keep constructors `private`.
  * - Use `init()` when you need a throwing factory (e.g., in tests or seeders).
  *
- * @template Props The shape of the entity's domain properties.
+ * @template Props The shape of the entity's user-defined domain properties.
+ *   Do **not** include `id`, `createdAt`, or `updatedAt` here — they are added
+ *   automatically via `EntityProps<Props>` in the factory methods.
  *
  * @example
  * ```typescript
  * interface UserProps { name: string; email: string; }
  *
  * class User extends Entity<UserProps> {
- *     private constructor(props: UserProps) { super(props); }
+ *     private constructor(props: EntityProps<UserProps>) { super(props); }
  *
- *     public static create(props: UserProps): IResult<User> {
- *         if (!this.isValidProps(props)) return Result.error('Invalid props');
- *         return Result.success(new User(props));
+ *     public static override isValidProps(props: unknown): boolean {
+ *         return (
+ *             this.validator.isObject(props) &&
+ *             'name' in props && this.validator.isString(props.name) &&
+ *             'email' in props && this.validator.isString(props.email)
+ *         );
  *     }
  * }
+ *
+ * // Autocomplete: name, email, id?, createdAt?, updatedAt?
+ * const result = User.create({ name: 'Alice', email: 'alice@example.com' });
+ * // get() autocomplete: 'name' | 'email' | 'id' | 'createdAt' | 'updatedAt'
+ * result.value().get('name');
  * ```
  */
-export class Entity<
+export abstract class Entity<
 	Props extends IEntityProps,
-> extends GettersAndSetters<Props> {
+> extends GettersAndSetters<EntityProps<Props>> {
 	/**
 	 * @description
 	 * Marker used internally by `Validator` to identify this instance as an `Entity`
@@ -54,20 +74,8 @@ export class Entity<
 	 * @internal
 	 */
 	protected readonly __kind = "Entity" as const;
-
-	/**
-	 * @description
-	 * Internal mapper used to serialize this entity into a plain object via `toObject()`.
-	 *
-	 * @internal
-	 */
 	private readonly autoMapper: AutoMapper;
-
-	/**
-	 * @description
-	 * The unique identifier of this entity instance.
-	 */
-	protected _id: UID<string>;
+	private _id: UID<string>;
 
 	/**
 	 * @description
@@ -77,7 +85,7 @@ export class Entity<
 	 * The `id` field is resolved from props if present (as string, number, or UID),
 	 * or a new UUID is generated automatically.
 	 *
-	 * @param props The domain properties for this entity.
+	 * @param props The domain properties for this entity, including optional implicit fields.
 	 * @param config Optional settings to disable getters or setters.
 	 *
 	 * @throws {DomainError} If `props` is not a plain object.
@@ -86,7 +94,7 @@ export class Entity<
 		if (!Entity.isPlainProps(props)) {
 			const name = new.target.name;
 			throw new DomainError(
-				`Props must be a plain object for entities. Received: "${typeof props}" in "${name}".`,
+				`Construct: props must be a plain object (received: ${InvalidPropsType(props)}).`,
 				{ context: name },
 			);
 		}
@@ -98,10 +106,9 @@ export class Entity<
 		) as Props;
 
 		super(merged, "Entity", config);
-
 		this.autoMapper = new AutoMapper();
 
-		const rawId = (props as Record<string, unknown>).id;
+		const rawId = (props as AnyObject).id;
 		const isUID = this.validator.isID(rawId);
 		const isStringOrNumber =
 			this.validator.isString(rawId) || this.validator.isNumber(rawId);
@@ -155,23 +162,38 @@ export class Entity<
 
 	/**
 	 * @description
-	 * Determines structural and identity equality between this entity and another of the same type.
+	 * Determines structural and identity equality between this entity and another.
 	 *
-	 * Two entities are equal when:
-	 * - Their `id` values are equal, AND
-	 * - Their properties (excluding `id`, `createdAt`, `updatedAt`) are deeply equal.
+	 * Two entities are considered equal when **all three** conditions hold:
+	 * 1. They are instances of the same concrete class (same `constructor`).
+	 * 2. Their `id` values are equal.
+	 * 3. Their domain properties (excluding `id`, `createdAt`, `updatedAt`) are deeply equal.
+	 *
+	 * **Why class-identity check matters (critical DDD rule):**
+	 * Without the constructor guard, a `User` entity and an `Admin` entity that happen
+	 * to share the same `id` (e.g. when restored from the same DB row) would be
+	 * considered equal — a silent, hard-to-trace bug. In DDD, entity identity is
+	 * scoped to its aggregate boundary and class type.
 	 *
 	 * @param other The entity to compare against.
-	 * @returns `true` if both entities are equal; `false` otherwise.
+	 * @returns `true` if both entities are fully equal; `false` otherwise.
 	 */
 	public isEqual(other: this): boolean {
-		const omit = (obj: Record<string, unknown>) => {
+		if (
+			!other ||
+			Reflect.getPrototypeOf(this)?.constructor !==
+				Reflect.getPrototypeOf(other)?.constructor
+		) {
+			return false;
+		}
+
+		const omit = (obj: AnyObject) => {
 			const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = obj;
 			return rest;
 		};
 
-		const currentProps = omit(this.props as Record<string, unknown>);
-		const otherProps = omit((other?.props ?? {}) as Record<string, unknown>);
+		const currentProps = omit(this.props as AnyObject);
+		const otherProps = omit((other?.props ?? {}) as AnyObject);
 
 		return (
 			this._id.isEqual(other?.id) &&
@@ -201,9 +223,13 @@ export class Entity<
 	 * ```typescript
 	 * const plain = user.toObject();
 	 * // { id: '...', name: 'Alice', createdAt: Date, updatedAt: Date }
+	 *
+	 * const dto = user.toObject(new UserDtoAdapter());
 	 * ```
 	 */
-	public toObject<T>(adapter?: Adapter<this, T> | IAdapter<this, T>): unknown {
+	public toObject<T>(
+		adapter?: Adapter<this, T> | IAdapter<this, T>,
+	): Readonly<T> {
 		if (
 			adapter &&
 			typeof (adapter as Adapter<this, T>).adaptOne === "function"
@@ -213,47 +239,88 @@ export class Entity<
 		if (adapter && typeof (adapter as IAdapter<this, T>).build === "function") {
 			return (adapter as IAdapter<this, T>).build(this).value();
 		}
-		return DeepFreeze(this.autoMapper.entityToObj(this) as object);
+		return DeepFreeze(
+			this.autoMapper.entityToObj(this) as object,
+		) as Readonly<T>;
 	}
 
 	/**
 	 * @description
 	 * Creates a new `Entity` instance wrapped in a `Result`.
+	 *
+	 * The `this: EntityConstructor<Props, T>` typing mirrors the pattern used by
+	 * `ValueObject.create()`, ensuring that when called on a concrete subclass,
+	 * TypeScript infers the correct `Props` and instance type `T` automatically —
+	 * so subclasses do **not** need to override `create()` just for types.
+	 *
 	 * Returns `Result.error()` if `isValidProps()` returns `false`.
 	 *
 	 * @param props The properties to validate and construct the entity with.
+	 *   Includes both user-defined domain props and optional implicit fields
+	 *   (`id`, `createdAt`, `updatedAt`).
 	 * @returns A `Result` containing the new instance on success, or an error on failure.
+	 *
+	 * @example
+	 * ```typescript
+	 * // No override needed — types are inferred from EntityConstructor<UserProps, User>
+	 * const result = User.create({ name: 'Alice', email: 'alice@example.com' });
+	 * //                                            ^^ autocomplete works here
+	 * if (result.isSuccess()) {
+	 *     result.value().get('name'); // 'Alice' — autocomplete works here too
+	 * }
+	 * ```
 	 */
-	public static create(props: unknown): IResult<unknown, string> {
-		// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
+	public static create<Props extends object, T extends Entity<Props>>(
+		this: EntityConstructor<Props, T>,
+		props: EntityProps<Props>,
+	): IResult<T, string> {
 		if (!this.isValidProps(props)) {
 			return Result.error(
-				// biome-ignore lint/complexity/noThisInStatic: Error messages should name the concrete subclass.
-				`Invalid props to create an instance of ${this.name}.`,
+				`Invalid props for ${this.name}: failed domain validation.`,
 			);
 		}
-		return Result.success(new this(props as AnyObject));
+
+		const instance = new (this as any)(props);
+		return Result.success(instance);
 	}
 
 	/**
 	 * @description
-	 * Initializes a new `Entity` instance directly, throwing if props are invalid.
-	 * Intended for tests and seeders — prefer `create()` in production code.
+	 * Initializes a new `Entity` instance directly, throwing a `DomainError` if
+	 * the provided props are invalid.
 	 *
-	 * @throws {DomainError} If not overridden in the subclass.
+	 * Prefer `create()` for production code. Use `init()` in tests, seeders, or contexts
+	 * where you can guarantee the props are valid and prefer exceptions over `Result`.
+	 *
+	 * Subclasses do **not** need to override this — types are inferred from
+	 * `EntityConstructor<Props, T>` the same way as `create()`.
+	 *
+	 * @param props The properties to validate and construct the entity with.
+	 * @returns A new instance of this entity subclass.
+	 * @throws {DomainError} If `isValidProps()` returns `false`.
+	 *
+	 * @example
+	 * ```typescript
+	 * // In tests or seeders where you want to throw on invalid data:
+	 * const user = User.init({ name: 'Alice', email: 'alice@example.com' });
+	 * ```
 	 */
-	public static init(_props: unknown): Entity<IEntityProps> {
-		throw new DomainError(
-			`${Entity.name}.init() is not implemented. Override this method in your subclass.`,
-			{ context: Entity.name },
-		);
+	public static init<Props extends object, T extends Entity<Props>>(
+		this: EntityConstructor<Props, T>,
+		props: EntityProps<Props>,
+	): T {
+		if (!this.isValidProps(props)) {
+			throw new DomainError(`Init: invalid props.`, { context: this.name });
+		}
+
+		const instance = new (this as any)(props);
+		return instance;
 	}
 
 	/**
 	 * @description Alias for `isValidProps()`.
 	 */
 	public static isValid(value: unknown): boolean {
-		// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
 		return this.isValidProps(value);
 	}
 
