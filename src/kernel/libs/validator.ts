@@ -1,3 +1,4 @@
+import type { Aggregate, Entity, ID, ValueObject } from "../core";
 import type { AnyObject } from "../types/utils.types";
 import { Stringify } from "../utils/string.utils";
 
@@ -29,7 +30,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is an aggregate, false otherwise.
 	 */
-	public isAggregate(props: unknown): boolean {
+	public isAggregate(props: unknown): props is Aggregate<never> {
 		if (props === null || typeof props !== "object") return false;
 		return (props as AnyObject).__aggregate === true;
 	}
@@ -41,7 +42,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is an array, false otherwise.
 	 */
-	public isArray(props: unknown): boolean {
+	public isArray(props: unknown): props is unknown[] {
 		return Array.isArray(props);
 	}
 
@@ -52,7 +53,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a boolean, false otherwise.
 	 */
-	public isBoolean(props: unknown): boolean {
+	public isBoolean(props: unknown): props is boolean {
 		return typeof props === "boolean";
 	}
 
@@ -63,7 +64,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a date, false otherwise.
 	 */
-	public isDate(props: unknown): boolean {
+	public isDate(props: unknown): props is Date {
 		return props instanceof Date;
 	}
 
@@ -74,7 +75,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is an entity, false otherwise.
 	 */
-	public isEntity(props: unknown): boolean {
+	public isEntity(props: unknown): props is Entity<never> {
 		if (props === null || typeof props !== "object") return false;
 		return (props as AnyObject).__kind === "Entity";
 	}
@@ -86,7 +87,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a function, false otherwise.
 	 */
-	public isFunction(props: unknown): boolean {
+	public isFunction(props: unknown): props is (...args: unknown[]) => unknown {
 		return typeof props === "function";
 	}
 
@@ -97,7 +98,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is an ID, false otherwise.
 	 */
-	public isID(props: unknown): boolean {
+	public isID(props: unknown): props is ID {
 		if (props === null || typeof props !== "object") return false;
 		return (props as AnyObject).__kind === "ID";
 	}
@@ -109,7 +110,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is null, false otherwise.
 	 */
-	public isNull(props: unknown): boolean {
+	public isNull(props: unknown): props is null {
 		return props === null;
 	}
 
@@ -120,7 +121,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a number, false otherwise.
 	 */
-	public isNumber(props: unknown): boolean {
+	public isNumber(props: unknown): props is number {
 		return typeof props === "number";
 	}
 
@@ -131,7 +132,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is an object, false otherwise.
 	 */
-	public isObject(props: unknown): boolean {
+	public isObject(props: unknown): props is Record<string, unknown> {
 		const isObj = typeof props === "object";
 		if (!isObj || props === null) return false;
 		if (Stringify(props) === Stringify({})) return true;
@@ -176,7 +177,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a symbol, false otherwise.
 	 */
-	public isSymbol(props: unknown): boolean {
+	public isSymbol(props: unknown): props is symbol {
 		return typeof props === "symbol";
 	}
 
@@ -187,7 +188,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a string, false otherwise.
 	 */
-	public isString(props: unknown): boolean {
+	public isString(props: unknown): props is string {
 		return typeof props === "string";
 	}
 
@@ -198,7 +199,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is undefined, false otherwise.
 	 */
-	public isUndefined(props: unknown): boolean {
+	public isUndefined(props: unknown): props is undefined {
 		return typeof props === "undefined";
 	}
 
@@ -209,7 +210,7 @@ export class Validator {
 	 * @param props The value to check.
 	 * @returns {boolean} True if the value is a value object, false otherwise.
 	 */
-	public isValueObject(props: unknown): boolean {
+	public isValueObject(props: unknown): props is ValueObject<never> {
 		if (props === null || typeof props !== "object") return false;
 		return (props as AnyObject).__kind === "ValueObject";
 	}
