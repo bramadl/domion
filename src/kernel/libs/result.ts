@@ -116,7 +116,9 @@ export class Result<T = void, D = string, M = AnyObject>
 	 */
 	public execute<X, Y>(command: ICommand<X, Y>): IResultExecuteFn<X, Y> {
 		return {
-			on: (option: IResultOption): Y | undefined => {
+			on: (
+				option: IResultOption,
+			): Promise<IResult<Y, string, AnyObject>> | undefined => {
 				if (option === "success" && this.isSuccess())
 					return command.execute(undefined as unknown as X);
 				if (option === "error" && this.isError())
@@ -124,7 +126,9 @@ export class Result<T = void, D = string, M = AnyObject>
 			},
 			withData: (data: X): IResultHook<Y> => {
 				return {
-					on: (option: IResultOption): Y | undefined => {
+					on: (
+						option: IResultOption,
+					): Promise<IResult<Y, string, AnyObject>> | undefined => {
 						if (option === "success" && this.isSuccess())
 							return command.execute(data);
 						if (option === "error" && this.isError())
