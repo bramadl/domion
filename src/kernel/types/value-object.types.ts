@@ -6,9 +6,9 @@
  * @template T The concrete `ValueObject` subclass type.
  */
 export type ValueObjectConstructor<Props, T> = {
-	new (props: Props): T;
 	isValidProps(props: Props): boolean;
 	readonly name: string;
+	prototype: T;
 };
 
 /**

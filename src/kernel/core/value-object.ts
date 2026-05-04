@@ -1,3 +1,6 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: TS cannot model private constructors with generic static factories. */
+/** biome-ignore-all lint/complexity/noThisInStatic: Required for polymorphic `this` in base factory (DDD pattern). */
+
 import { AutoMapper } from "../helpers/auto-mapper";
 import { DomainError } from "../helpers/domain-error";
 import { GettersAndSetters } from "../helpers/getters-setters";
@@ -47,7 +50,7 @@ import { DeepFreeze, StableStringify } from "../utils/object.utils";
  * }
  * ```
  */
-export class ValueObject<Props> extends GettersAndSetters<Props> {
+export abstract class ValueObject<Props> extends GettersAndSetters<Props> {
 	/**
 	 * @description
 	 * Marker used internally by `Validator` to identify this instance as a `ValueObject`
@@ -56,14 +59,6 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @internal
 	 */
 	protected readonly __kind = "ValueObject" as const;
-
-	/**
-	 * @description
-	 * Internal mapper used to serialize this value object into a plain object
-	 * via `toObject()`. Not intended for direct use by subclasses.
-	 *
-	 * @internal
-	 */
 	private readonly autoMapper: AutoMapper;
 
 	/**
@@ -73,7 +68,7 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @param props The properties that define this value object's state.
 	 * @param config Optional settings to disable getters or setters.
 	 */
-	protected constructor(props: Props, config?: IValueObjectSettings) {
+	constructor(props: Props, config?: IValueObjectSettings) {
 		super(props, "ValueObject", { ...config, disableSetters: true });
 		this.autoMapper = new AutoMapper();
 	}
@@ -242,14 +237,14 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 		this: ValueObjectConstructor<Props, T>,
 		props: Props,
 	): IResult<T> {
-		// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
 		if (!this.isValidProps(props)) {
 			return Result.error(
-				// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
 				`Invalid props for ${this.name}: failed domain validation.`,
 			);
 		}
-		return Result.success(new this(props));
+
+		const instance = new (this as any)(props);
+		return Result.success(instance);
 	}
 
 	/**
@@ -268,13 +263,12 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 		this: ValueObjectConstructor<Props, T>,
 		props: Props,
 	): T {
-		// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
 		if (!this.isValidProps(props)) {
-			// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
-			throw new DomainError(`Invalid props to initialize ${this.name}.`);
+			throw new DomainError(`Init: invalid props.`, { context: this.name });
 		}
 
-		return new this(props);
+		const instance = new (this as any)(props);
+		return instance;
 	}
 
 	/**
@@ -286,7 +280,6 @@ export class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @returns `true` if valid; `false` otherwise.
 	 */
 	public static isValid(value: unknown): boolean {
-		// biome-ignore lint/complexity/noThisInStatic: Static validation must dispatch to subclass overrides.
 		return this.isValidProps(value);
 	}
 

@@ -63,7 +63,7 @@ export interface GettersSettersConfig {
  * }
  * ```
  */
-export class GettersAndSetters<Props> {
+export abstract class GettersAndSetters<Props> {
 	protected static readonly util: Utils = utils;
 	protected static readonly validator: Validator = validator;
 	protected readonly util: Utils = utils;
@@ -152,9 +152,10 @@ export class GettersAndSetters<Props> {
 	private assertSettersEnabled<Key extends keyof Props>(key: Key): void {
 		if (this.config.disableSetters) {
 			const name = Reflect.getPrototypeOf(this)?.constructor.name;
-			throw new DomainError(
-				`Attempted to set key "${String(key)}" but setters are disabled on ${name}.`,
-			);
+			throw new DomainError(`Set: setters are disabled for "${String(key)}".`, {
+				context: name,
+				field: String(key),
+			});
 		}
 	}
 
@@ -182,17 +183,17 @@ export class GettersAndSetters<Props> {
 			typeof externalValidation === "function" &&
 			!externalValidation(value)
 		) {
-			throw new DomainError(
-				`Validation failed for key "${String(key)}" in ${name}.`,
-				{ field: String(key), context: name },
-			);
+			throw new DomainError(`Set: validation failed for "${String(key)}".`, {
+				context: name,
+				field: String(key),
+			});
 		}
 
 		if (!this.validation(value, key)) {
-			throw new DomainError(
-				`Invariant violated for key "${String(key)}" in ${name}.`,
-				{ field: String(key), context: name },
-			);
+			throw new DomainError(`Set: invariant violated for "${String(key)}".`, {
+				context: name,
+				field: String(key),
+			});
 		}
 	}
 
@@ -244,43 +245,62 @@ export class GettersAndSetters<Props> {
 	 * const raw = stringVo.get('value'); // 'hello'
 	 * ```
 	 */
-	public get<Key extends keyof Props>(key: Key): Readonly<Props[Key]> {
+	public get<Key extends keyof Props>(key: Key): Readonly<Props[Key]>;
+	public get(
+		key: "value",
+	): Readonly<"value" extends keyof Props ? Props["value"] : Props>;
+	/** biome-ignore lint/suspicious/noExplicitAny: TS cannot correlate overload branches with runtime narrowing. */
+	public get(key: any): any {
 		if (this.config.disableGetters) {
 			const name = Reflect.getPrototypeOf(this)?.constructor.name;
-			throw new DomainError(
-				`Attempted to get key "${String(key)}" but getters are disabled on ${name}.`,
-			);
-		}
-
-		if (
-			this.validator.isDate(this.props) ||
-			this.validator.isArray(this.props)
-		) {
-			return this.props as unknown as Readonly<Props[Key]>;
+			throw new DomainError(`Get: getters are disabled for "${String(key)}".`, {
+				context: name,
+				field: String(key),
+			});
 		}
 
 		if (key === "value") {
-			if (this.validator.isSymbol(this.props)) {
-				return (this.props as symbol).description as unknown as Readonly<
-					Props[Key]
-				>;
+			if (
+				this.props &&
+				typeof this.props === "object" &&
+				"value" in (this.props as AnyObject)
+			) {
+				return (this.props as AnyObject).value;
 			}
+
 			if (
 				this.validator.isBoolean(this.props) ||
 				this.validator.isNumber(this.props) ||
-				this.validator.isString(this.props)
+				this.validator.isString(this.props) ||
+				this.validator.isDate(this.props)
 			) {
-				return this.props as unknown as Readonly<Props[Key]>;
+				return this.props;
 			}
+
+			if (this.validator.isSymbol(this.props)) {
+				return (this.props as symbol).description;
+			}
+
 			if (this.validator.isID(this.props)) {
-				return (this.props as unknown as UID).value() as unknown as Readonly<
-					Props[Key]
-				>;
+				return (this.props as UID).value();
+			}
+
+			if (this.validator.isArray(this.props)) {
+				return this.props;
 			}
 		}
 
 		const obj = this.props as AnyObject;
-		return (obj[key as string] ?? null) as Readonly<Props[Key]>;
+
+		if (!(key in obj)) {
+			const name = Reflect.getPrototypeOf(this)?.constructor.name;
+			throw new DomainError(`Get: key "${String(key)}" does not exist.`, {
+				context: name,
+				field: String(key),
+			});
+		}
+
+		return obj[key] ?? null;
 	}
 
 	/**

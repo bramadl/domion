@@ -35,7 +35,11 @@ export class DomainError extends Error {
 		message: string,
 		options?: { field?: string; context?: string; cause?: unknown },
 	) {
-		super(message, { cause: options?.cause });
+		const formattedMessage = options?.context
+			? `[${options.context}] ${message}`
+			: message;
+
+		super(formattedMessage, { cause: options?.cause });
 		this.name = "DomainError";
 		this.field = options?.field;
 		this.context = options?.context;
