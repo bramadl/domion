@@ -19,9 +19,8 @@ class Age extends ValueObject<AgeProps> {
 		return (
 			this.validator.isObject(props) &&
 			!this.validator.isNull(props) &&
-			"value" in props &&
-			this.validator.isNumber((props).value) &&
-			this.validator.number((props).value).isGreaterOrEqualTo(0)
+			this.validator.isNumber(props.value) &&
+			this.validator.number(props.value).isGreaterOrEqualTo(0)
 		);
 	}
 }
@@ -40,10 +39,8 @@ class Money extends ValueObject<MoneyProps> {
 		return (
 			this.validator.isObject(props) &&
 			!this.validator.isNull(props) &&
-			"amount" in props &&
-			"currency" in props &&
-			this.validator.isNumber((props).amount) &&
-			this.validator.isString((props).currency)
+			this.validator.isNumber(props.amount) &&
+			this.validator.isString(props.currency)
 		);
 	}
 }
@@ -78,319 +75,314 @@ class IdVO extends ValueObject<UID<string>> {
 	}
 }
 
-// ─── Factory: create() ───────────────────────────────────────────────────────
+// ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe("ValueObject.create()", () => {
-	test("returns success when props are valid", () => {
-		const result = Age.create({ value: 10 });
+describe("[Core] ValueObject", () => {
+	describe("Static Factories", () => {
+		describe("ValueObject.create()", () => {
+			test("returns success when props are valid", () => {
+				const result = Age.create({ value: 10 });
 
-		expect(result.isSuccess()).toBe(true);
-		expect(result.value()).toBeInstanceOf(Age);
+				expect(result.isSuccess()).toBe(true);
+				expect(result.value()).toBeInstanceOf(Age);
+			});
+
+			test("returns error when props are invalid", () => {
+				const result = Age.create({ value: -1 });
+
+				expect(result.isError()).toBe(true);
+			});
+
+			test("error message contains the subclass name", () => {
+				const result = Age.create({ value: -1 });
+
+				expect(result.error()).toContain("Age");
+			});
+
+			test("base isValidProps rejects null", () => {
+				const result = NestedValue.create(null as unknown as { meta: { name: string; power: number } });
+
+				expect(result.isError()).toBe(true);
+			});
+
+			test("base isValidProps rejects undefined", () => {
+				const result = NestedValue.create(undefined as unknown as { meta: { name: string; power: number } });
+
+				expect(result.isError()).toBe(true);
+			});
+		});
+
+		describe("ValueObject.init()", () => {
+			test("returns instance directly when props are valid", () => {
+				const age = Age.init({ value: 5 });
+
+				expect(age).toBeInstanceOf(Age);
+				expect(age.get("value")).toBe(5);
+			});
+
+			test("throws DomainError when props are invalid", () => {
+				expect(() => Age.init({ value: -1 })).toThrow(DomainError);
+			});
+
+			test("error contains the subclass name", () => {
+				expect(() => Age.init({ value: -1 })).toThrow(/Age/);
+			});
+		});
 	});
 
-	test("returns error when props are invalid", () => {
-		const result = Age.create({ value: -1 });
+	describe("Validation Helpers", () => {
+		describe("ValueObject.isValidProps()", () => {
+			test("delegates to subclass override — valid props return true", () => {
+				expect(Age.isValidProps({ value: 0 })).toBe(true);
+			});
 
-		expect(result.isError()).toBe(true);
+			test("delegates to subclass override — invalid props return false", () => {
+				expect(Age.isValidProps({ value: -1 })).toBe(false);
+			});
+
+			test("rejects null via base implementation", () => {
+				expect(Age.isValidProps(null as unknown as AgeProps)).toBe(false);
+			});
+		});
+
+		describe("ValueObject.isValid()", () => {
+			test("is an alias for isValidProps — returns true for valid props", () => {
+				expect(Age.isValid({ value: 1 })).toBe(true);
+			});
+
+			test("is an alias for isValidProps — returns false for invalid props", () => {
+				expect(Age.isValid({ value: -1 })).toBe(false);
+			});
+		});
 	});
 
-	test("error message contains the subclass name", () => {
-		const result = Age.create({ value: -1 });
+	describe("Instance Methods", () => {
+		describe("vo.get()", () => {
+			test("returns value for object-shaped props", () => {
+				const age = Age.create({ value: 42 }).value();
 
-		expect(result.error()).toContain("Age");
-	});
+				expect(age.get("value")).toBe(42);
+			});
 
-	test("base isValidProps rejects null", () => {
-		// NestedValue has no isValidProps override — falls back to base
-		const result = (NestedValue).create(null as unknown as { meta: { name: string; power: number; }; });
+			test("returns primitive props via the 'value' key", () => {
+				const vo = StringVO.init("hello");
 
-		expect(result.isError()).toBe(true);
-	});
+				expect(vo.get("value")).toBe("hello");
+			});
+		});
 
-	test("base isValidProps rejects undefined", () => {
-		const result = (NestedValue).create(
-			undefined as unknown as { meta: { name: string; power: number; }; },
-		);
+		describe("vo.getRaw()", () => {
+			test("returns a frozen snapshot of the raw props", () => {
+				const age = Age.create({ value: 10 }).value();
+				const raw = age.getRaw();
 
-		expect(result.isError()).toBe(true);
-	});
-});
+				expect(raw).toEqual({ value: 10 });
+				expect(Object.isFrozen(raw)).toBe(true);
+			});
+		});
 
-// ─── Factory: init() ─────────────────────────────────────────────────────────
+		describe("vo.change() / vo.set().to() — setters disabled", () => {
+			test("change() throws DomainError — setters are disabled by default on ValueObjects", () => {
+				const age = Age.create({ value: 10 }).value();
 
-describe("ValueObject.init()", () => {
-	test("returns instance directly when props are valid", () => {
-		const age = Age.init({ value: 5 });
+				expect(() => age.change("value", 11)).toThrow(DomainError);
+			});
 
-		expect(age).toBeInstanceOf(Age);
-		expect(age.get("value")).toBe(5);
-	});
+			test("set().to() throws DomainError — setters are disabled by default on ValueObjects", () => {
+				const age = Age.create({ value: 10 }).value();
 
-	test("throws DomainError when props are invalid", () => {
-		expect(() => Age.init({ value: -1 })).toThrow(DomainError);
-	});
+				expect(() => age.set("value").to(11)).toThrow(DomainError);
+			});
 
-	test("error contains the subclass name", () => {
-		expect(() => Age.init({ value: -1 })).toThrow(/Age/);
-	});
-});
+			test("props remain unchanged after a failed mutation attempt", () => {
+				const age = Age.create({ value: 10 }).value();
 
-// ─── Validation helpers ───────────────────────────────────────────────────────
+				try { age.change("value", 99); } catch { /* expected */ }
 
-describe("ValueObject.isValidProps() / isValid()", () => {
-	test("isValidProps delegates to subclass override", () => {
-		expect(Age.isValidProps({ value: 0 })).toBe(true);
-		expect(Age.isValidProps({ value: -1 })).toBe(false);
-		expect(Age.isValidProps(null as unknown as AgeProps)).toBe(false);
-	});
+				expect(age.get("value")).toBe(10);
+			});
+		});
 
-	test("isValid is an alias for isValidProps", () => {
-		expect(Age.isValid({ value: 1 })).toBe(true);
-		expect(Age.isValid({ value: -1 })).toBe(false);
-	});
-});
+		describe("vo.clone()", () => {
+			test("returns a new instance of the same subclass", () => {
+				const age = Age.create({ value: 10 }).value();
+				const cloned = age.clone({ value: 20 });
 
-// ─── Setters (disabled by default on VO) ─────────────────────────────────────
+				expect(cloned).toBeInstanceOf(Age);
+				expect(cloned).not.toBe(age);
+			});
 
-describe("ValueObject setters", () => {
-	test("change() throws DomainError — setters disabled by default", () => {
-		const age = Age.create({ value: 10 }).value();
+			test("overrides only the provided props, preserving the rest", () => {
+				const money = Money.create({ amount: 100, currency: "USD" }).value();
+				const converted = money.clone({ amount: 200 });
 
-		expect(() => age.change("value", 11)).toThrow(DomainError);
-	});
+				expect(converted.get("amount")).toBe(200);
+				expect(converted.get("currency")).toBe("USD");
+			});
 
-	test("set().to() throws DomainError — setters disabled by default", () => {
-		const age = Age.create({ value: 10 }).value();
+			test("original is not mutated after clone", () => {
+				const age = Age.create({ value: 10 }).value();
+				age.clone({ value: 99 });
 
-		expect(() => age.set("value").to(11)).toThrow(DomainError);
-	});
+				expect(age.get("value")).toBe(10);
+			});
 
-	test("props remain unchanged after failed mutation attempt", () => {
-		const age = Age.create({ value: 10 }).value();
+			test("clone of primitive props returns identical value", () => {
+				const vo = StringVO.init("hello");
+				const cloned = vo.clone();
 
-		try {
-			age.change("value", 99);
-		} catch {
-			// expected
-		}
+				expect(cloned.get("value")).toBe("hello");
+				expect(cloned).not.toBe(vo);
+			});
 
-		expect(age.get("value")).toBe(10);
-	});
-});
+			test("clone of Date props returns a new instance with the same timestamp", () => {
+				const d = new Date("2026-01-01T00:00:00.000Z");
+				const vo = DateVO.init(d);
+				const cloned = vo.clone();
 
-// ─── Getters ──────────────────────────────────────────────────────────────────
+				expect(cloned.get("value")).toEqual(d);
+				expect(cloned).not.toBe(vo);
+			});
+		});
 
-describe("ValueObject.get()", () => {
-	test("returns value for object props", () => {
-		const age = Age.create({ value: 42 }).value();
+		describe("vo.isEqual()", () => {
+			test("two VOs with same object props are equal", () => {
+				const a = Age.create({ value: 10 }).value();
+				const b = Age.create({ value: 10 }).value();
 
-		expect(age.get("value")).toBe(42);
-	});
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-	test("returns primitive props via 'value' key", () => {
-		const vo = StringVO.init("hello");
+			test("two VOs with different object props are not equal", () => {
+				const a = Age.create({ value: 10 }).value();
+				const b = Age.create({ value: 20 }).value();
 
-		expect(vo.get("value")).toBe("hello");
-	});
+				expect(a.isEqual(b)).toBe(false);
+			});
 
-	test("getRaw() returns frozen snapshot of props", () => {
-		const age = Age.create({ value: 10 }).value();
-		const raw = age.getRaw();
+			test("two VOs with the same primitive (string) props are equal", () => {
+				const a = StringVO.init("hello");
+				const b = StringVO.init("hello");
 
-		expect(raw).toEqual({ value: 10 });
-		expect(Object.isFrozen(raw)).toBe(true);
-	});
-});
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-// ─── clone() ─────────────────────────────────────────────────────────────────
+			test("two VOs with different primitive props are not equal", () => {
+				const a = StringVO.init("hello");
+				const b = StringVO.init("world");
 
-describe("ValueObject.clone()", () => {
-	test("returns a new instance of the same subclass", () => {
-		const age = Age.create({ value: 10 }).value();
-		const cloned = age.clone({ value: 20 });
+				expect(a.isEqual(b)).toBe(false);
+			});
 
-		expect(cloned).toBeInstanceOf(Age);
-		expect(cloned).not.toBe(age);
-	});
+			test("two VOs with the same Date props are equal", () => {
+				const a = DateVO.init(new Date("2026-01-01T00:00:00.000Z"));
+				const b = DateVO.init(new Date("2026-01-01T00:00:00.000Z"));
 
-	test("overrides only the provided props", () => {
-		const money = Money.create({ amount: 100, currency: "USD" }).value();
-		const converted = money.clone({ amount: 200 });
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-		expect(converted.get("amount")).toBe(200);
-		expect(converted.get("currency")).toBe("USD");
-	});
+			test("two VOs with different Date props are not equal", () => {
+				const a = DateVO.init(new Date("2026-01-01"));
+				const b = DateVO.init(new Date("2027-01-01"));
 
-	test("original is not mutated after clone", () => {
-		const age = Age.create({ value: 10 }).value();
-		age.clone({ value: 99 });
+				expect(a.isEqual(b)).toBe(false);
+			});
 
-		expect(age.get("value")).toBe(10);
-	});
+			test("two VOs with the same UID props are equal", () => {
+				const a = IdVO.init(ID.create("abc"));
+				const b = IdVO.init(ID.create("abc"));
 
-	test("clone of primitive props returns identical value", () => {
-		const vo = StringVO.init("hello");
-		const cloned = vo.clone();
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-		expect(cloned.get("value")).toBe("hello");
-		expect(cloned).not.toBe(vo);
-	});
+			test("two VOs with different UID props are not equal", () => {
+				const a = IdVO.init(ID.create("abc"));
+				const b = IdVO.init(ID.create("xyz"));
 
-	test("clone of Date props returns new instance with same timestamp", () => {
-		const d = new Date("2026-01-01T00:00:00.000Z");
-		const vo = DateVO.init(d);
-		const cloned = vo.clone();
+				expect(a.isEqual(b)).toBe(false);
+			});
 
-    const a = cloned.get("value")
-		expect(cloned.get("value")).toEqual(d);
-		expect(cloned).not.toBe(vo);
-	});
-});
+			test("two VOs with the same symbol props are equal", () => {
+				const s = Symbol("role");
+				const a = SymbolVO.init(s);
+				const b = SymbolVO.init(s);
 
-// ─── isEqual() ───────────────────────────────────────────────────────────────
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-describe("ValueObject.isEqual()", () => {
-	test("two VOs with same object props are equal", () => {
-		const a = Age.create({ value: 10 }).value();
-		const b = Age.create({ value: 10 }).value();
+			test("two VOs with the same nested object props are equal", () => {
+				const a = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const b = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
 
-		expect(a.isEqual(b)).toBe(true);
-	});
+				expect(a.isEqual(b)).toBe(true);
+			});
 
-	test("two VOs with different object props are not equal", () => {
-		const a = Age.create({ value: 10 }).value();
-		const b = Age.create({ value: 20 }).value();
+			test("two VOs with different nested object props are not equal", () => {
+				const a = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const b = new NestedValue({ meta: { name: "Raichu", power: 90 } });
 
-		expect(a.isEqual(b)).toBe(false);
-	});
+				expect(a.isEqual(b)).toBe(false);
+			});
 
-	test("two VOs with same primitive (string) props are equal", () => {
-		const a = StringVO.init("hello");
-		const b = StringVO.init("hello");
+			test("VOs of different subclasses with structurally similar props are not equal", () => {
+				const age = Age.create({ value: 10 }).value();
+				const money = Money.create({ amount: 10, currency: "USD" }).value();
 
-		expect(a.isEqual(b)).toBe(true);
-	});
+				expect(age.isEqual(money as unknown as Age)).toBe(false);
+			});
+		});
 
-	test("two VOs with different primitive props are not equal", () => {
-		const a = StringVO.init("hello");
-		const b = StringVO.init("world");
+		describe("vo.toObject()", () => {
+			test("serializes object props to a plain object", () => {
+				const age = Age.create({ value: 10 }).value();
 
-		expect(a.isEqual(b)).toBe(false);
-	});
+				expect(age.toObject()).toEqual({ value: 10 });
+			});
 
-	test("two VOs with same Date props are equal", () => {
-		const a = DateVO.init(new Date("2026-01-01T00:00:00.000Z"));
-		const b = DateVO.init(new Date("2026-01-01T00:00:00.000Z"));
+			test("serializes nested object props correctly", () => {
+				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
 
-		expect(a.isEqual(b)).toBe(true);
-	});
+				expect(nested.toObject()).toEqual({ meta: { name: "Pikachu", power: 55 } });
+			});
 
-	test("two VOs with different Date props are not equal", () => {
-		const a = DateVO.init(new Date("2026-01-01"));
-		const b = DateVO.init(new Date("2027-01-01"));
+			test("returns a deeply frozen object for object props", () => {
+				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const result = nested.toObject();
 
-		expect(a.isEqual(b)).toBe(false);
-	});
+				expect(Object.isFrozen(result)).toBe(true);
+				expect(Object.isFrozen((result as { meta: object }).meta)).toBe(true);
+			});
 
-	test("two VOs with same UID props are equal", () => {
-		const a = IdVO.init(ID.create("abc"));
-		const b = IdVO.init(ID.create("abc"));
+			test("mutation on the frozen result throws", () => {
+				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const result = nested.toObject() as { meta: { name: string } };
 
-		expect(a.isEqual(b)).toBe(true);
-	});
+				expect(() => { result.meta.name = "Raichu"; }).toThrow();
+			});
 
-	test("two VOs with different UID props are not equal", () => {
-		const a = IdVO.init(ID.create("abc"));
-		const b = IdVO.init(ID.create("xyz"));
+			test("returns primitive value as-is without freezing", () => {
+				const vo = StringVO.init("hello");
 
-		expect(a.isEqual(b)).toBe(false);
-	});
+				expect(vo.toObject()).toBe("hello");
+			});
 
-	test("two VOs with same symbol props are equal", () => {
-		const s = Symbol("role");
-		const a = SymbolVO.init(s);
-		const b = SymbolVO.init(s);
+			test("uses Adapter.adaptOne when an Adapter is provided", () => {
+				const age = Age.create({ value: 10 }).value();
+				const adapter: Adapter<Age, { age: number }> = {
+					adaptOne: (vo) => ({ age: vo.get("value") }),
+				};
 
-		expect(a.isEqual(b)).toBe(true);
-	});
+				expect(age.toObject(adapter)).toEqual({ age: 10 });
+			});
 
-	test("two VOs with same nested object props are equal", () => {
-		const a = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
-		const b = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+			test("uses IAdapter.build when an IAdapter is provided", () => {
+				const age = Age.create({ value: 10 }).value();
+				const adapter: IAdapter<Age, { age: number }> = {
+					build: (vo) => Result.success({ age: vo.get("value") }),
+				};
 
-		expect(a.isEqual(b)).toBe(true);
-	});
-
-	test("two VOs with different nested object props are not equal", () => {
-		const a = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
-		const b = new NestedValue({ meta: { name: "Raichu", power: 90 } });
-
-		expect(a.isEqual(b)).toBe(false);
-	});
-
-	test("VOs of different classes with same props are not equal", () => {
-		// Age and Money both have numeric props but are structurally different classes
-		const age = Age.create({ value: 10 }).value();
-		const money = Money.create({ amount: 10, currency: "USD" }).value();
-
-		// Different __kind props shape — should not be equal
-		expect(age.isEqual(money as unknown as Age)).toBe(false);
-	});
-});
-
-// ─── toObject() ──────────────────────────────────────────────────────────────
-
-describe("ValueObject.toObject()", () => {
-	test("serializes object props to plain object", () => {
-		const age = Age.create({ value: 10 }).value();
-
-		expect(age.toObject()).toEqual({ value: 10 });
-	});
-
-	test("returns deeply frozen object for object props", () => {
-		const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
-		const result = nested.toObject();
-
-		expect(Object.isFrozen(result)).toBe(true);
-		expect(Object.isFrozen((result as { meta: object }).meta)).toBe(true);
-	});
-
-	test("mutation on frozen result throws", () => {
-		const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
-		const result = nested.toObject() as { meta: { name: string } };
-
-		expect(() => {
-			result.meta.name = "Raichu";
-		}).toThrow();
-	});
-
-	test("returns primitive value as-is (no freeze)", () => {
-		const vo = StringVO.init("hello");
-
-		expect(vo.toObject()).toBe("hello");
-	});
-
-	test("uses Adapter.adaptOne when provided", () => {
-		const age = Age.create({ value: 10 }).value();
-		const adapter: Adapter<Age, { age: number }> = {
-			adaptOne: (vo) => ({ age: vo.get("value") }),
-		};
-
-		expect(age.toObject(adapter)).toEqual({ age: 10 });
-	});
-
-	test("uses IAdapter.build when provided", () => {
-		const age = Age.create({ value: 10 }).value();
-		const adapter: IAdapter<Age, { age: number }> = {
-			build: (vo) => Result.success({ age: vo.get("value") }),
-		};
-
-		expect(age.toObject(adapter)).toEqual({ age: 10 });
-	});
-
-	test("serializes nested object props correctly", () => {
-		const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
-
-		expect(nested.toObject()).toEqual({ meta: { name: "Pikachu", power: 55 } });
+				expect(age.toObject(adapter)).toEqual({ age: 10 });
+			});
+		});
 	});
 });
