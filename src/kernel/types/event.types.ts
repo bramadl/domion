@@ -1,94 +1,71 @@
 /**
  * @description
- * Metrics snapshot exposed on an Aggregate instance.
+ * Represents a domain event — an immutable record of something that happened
+ * within an aggregate boundary.
+ *
+ * Domain events are plain data. They carry no behaviour, no handlers, and no
+ * knowledge of how they will be consumed. The `type` field is the only
+ * required identifier; every other field provides tracing context.
+ *
+ * Naming convention: past-tense, `aggregate:fact` format.
+ * @example `'order:placed'`, `'user:registered'`, `'pokemon:caught'`
+ *
+ * @template TPayload The shape of the event-specific data.
  */
-export interface AggregateEventMetrics {
-	current: number;
-	dispatch: number;
-	total: number;
+export interface DomainEvent<TPayload = unknown> {
+	/**
+	 * @description
+	 * The event type identifier. Use past-tense, colon-separated format:
+	 * `'<aggregate>:<fact>'` — e.g. `'order:placed'`, `'user:email-changed'`.
+	 */
+	readonly type: string;
+
+	/**
+	 * @description
+	 * The string value of the aggregate's `id` at the time the event was emitted.
+	 */
+	readonly aggregateId?: string;
+
+	/**
+	 * @description
+	 * The class name of the aggregate that emitted this event.
+	 * Useful for logging, filtering, and debugging across aggregate boundaries.
+	 *
+	 * @example `'Order'`, `'User'`, `'Pokemon'`
+	 */
+	readonly aggregateName?: string;
+
+	/**
+	 * @description
+	 * The timestamp at which this event was created inside the aggregate.
+	 * Reflects domain time, not infrastructure time.
+	 */
+	readonly occurredAt?: Date;
+
+	/**
+	 * @description
+	 * Event-specific data. Keep this flat and serializable — avoid class
+	 * instances, functions, or circular references so the event can be safely
+	 * transmitted across process boundaries.
+	 */
+	readonly payload?: TPayload;
 }
 
 /**
  * @description
- * An asynchronous event handler function.
+ * Represents a generic browser / server event payload wrapper.
+ * Used internally by `BrowserEventManager` and `ServerEventManager`.
  *
- * @template T The aggregate type.
- */
-export type AsyncEventHandler<T> = (
-	aggregate: T,
-	args: [DomainEventEntry<T>, ...unknown[]],
-) => Promise<void>;
-
-/**
- * @description
- * Abstract base class for structured domain event handlers.
- * Extend this to define reusable, named event handlers for an aggregate.
- *
- * @template T The aggregate type this handler is associated with.
- *
- * @example
- * ```typescript
- * class OrderPlacedHandler extends BaseEventHandler<Order> {
- *     constructor() {
- *         super({ eventName: 'order:placed' });
- *     }
- *
- *     dispatch(aggregate: Order): void {
- *         console.log('Order placed:', aggregate.id.value());
- *     }
- * }
- * ```
- */
-export abstract class BaseEventHandler<T> {
-	constructor(public readonly params: EventHandlerParams) {
-		if (typeof params?.eventName !== "string") {
-			throw new Error("params.eventName is required as string");
-		}
-		this.dispatch = this.dispatch.bind(this);
-	}
-
-	abstract dispatch(
-		aggregate: T,
-		args: [DomainEventEntry<T>, ...unknown[]],
-	): Promise<void> | void;
-}
-
-/**
- * @description
- * Abstract class defining the contract for an application-level event manager.
- * Implemented separately for browser and server environments.
- */
-export abstract class BaseEventManager {
-	abstract subscribe(
-		eventName: string,
-		fn: (event: DomainEventPayload) => void | Promise<void>,
-	): void;
-	abstract exists(eventName: string): boolean;
-	abstract removeEvent(eventName: string): boolean;
-	abstract dispatchEvent(eventName: string, ...args: unknown[]): void;
-}
-
-/**
- * @description
- * Represents a stored domain event with its handler and priority options.
- *
- * @template T The aggregate type this event is associated with.
- */
-export interface DomainEventEntry<T> {
-	eventName: string;
-	handler: EventHandler<T>;
-	options: EventPriorityOptions;
-}
-
-/**
- * @description
- * Represents a generic browser/server event payload.
+ * @internal
  */
 export type DomainEventPayload = { detail?: unknown[] };
 
 /**
  * @description
  * Stores a registered event name and its associated callback.
+ * Used internally by the built-in event managers.
+ *
+ * @internal
  */
 export interface EventEntry {
 	eventName: string;
@@ -97,45 +74,56 @@ export interface EventEntry {
 
 /**
  * @description
- * An event handler — either synchronous or asynchronous.
+ * Subscriber callback type — receives a fully-typed `DomainEvent` and may
+ * return a `Promise` for async side effects.
+ */
+export type EventSubscriber<TPayload = unknown> = (
+	event: DomainEvent<TPayload>,
+) => void | Promise<void>;
+
+/**
+ * @description
+ * Contract for an application-level event bus.
  *
- * @template T The aggregate type.
- */
-export type EventHandler<T> = AsyncEventHandler<T> | SyncEventHandler<T>;
-
-/**
- * @description
- * Parameters for configuring a structured event handler class.
- */
-export interface EventHandlerParams {
-	eventName: string;
-	options?: EventPriorityOptions;
-}
-
-/**
- * @description
- * Metrics interface for tracking event dispatch state.
- */
-export interface EventMetrics {
-	totalDispatched(): number;
-	totalEvents(): number;
-}
-
-/**
- * @description
- * Priority configuration for a domain event.
- */
-export interface EventPriorityOptions {
-	priority: number;
-}
-
-/**
- * @description
- * A synchronous event handler function.
+ * Implement this interface to integrate any pub-sub mechanism — an in-process
+ * `EventEmitter`, a Redis Streams adapter, BullMQ, NATS, or any other
+ * transport — with the domain event system produced by `Aggregate.pullEvents()`.
  *
- * @template T The aggregate type.
+ * The library ships with a `EventBus` implementation that works
+ * out-of-the-box in both Node.js and browser environments. Swap it for your
+ * own at the application layer without touching any domain code.
+ *
+ * @example
+ * ```typescript
+ * class RedisEventBus implements IEventBus {
+ *     async publish(event: DomainEvent): Promise<void> {
+ *         await redis.xadd(event.type, '*', 'data', JSON.stringify(event));
+ *     }
+ *     async publishAll(events: ReadonlyArray<DomainEvent>): Promise<void> {
+ *         for (const event of events) await this.publish(event);
+ *     }
+ * }
+ * ```
  */
-export type SyncEventHandler<T> = (
-	aggregate: T,
-	args: [DomainEventEntry<T>, ...unknown[]],
-) => void;
+export interface IEventBus {
+	/**
+	 * @description Publishes a single domain event.
+	 */
+	publish(event: DomainEvent): Promise<void>;
+
+	/**
+	 * @description
+	 * Publishes all domain events in the provided array.
+	 * Implementations should preserve order.
+	 */
+	publishAll(events: ReadonlyArray<DomainEvent>): Promise<void>;
+}
+
+/**
+ * @description
+ * Internal registry entry stored per event type.
+ */
+export interface SubscriberEntry {
+	type: string;
+	subscriber: EventSubscriber;
+}
