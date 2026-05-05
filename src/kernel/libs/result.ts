@@ -25,11 +25,11 @@ import { Iterator } from "./iterator";
 export class Result<T = void, D = string, M = AnyObject>
 	implements IResult<T, D, M>
 {
-	#data: Readonly<T | null>;
-	#error: Readonly<D | null>;
-	#isError: Readonly<boolean>;
-	#isSuccess: Readonly<boolean>;
-	#metaData: Readonly<M>;
+	readonly #data: Readonly<T | null>;
+	readonly #error: Readonly<D | null>;
+	readonly #isError: Readonly<boolean>;
+	readonly #isSuccess: Readonly<boolean>;
+	readonly #metaData: Readonly<M>;
 
 	private constructor(isSuccess: boolean, data?: T, error?: D, metaData?: M) {
 		this.#data = data ?? null;

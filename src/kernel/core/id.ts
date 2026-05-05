@@ -1,4 +1,5 @@
 import { UUID } from "../libs/crypto";
+import validator from "../libs/validator";
 import type { UID } from "../types/uid.types";
 
 /**
@@ -7,27 +8,30 @@ import type { UID } from "../types/uid.types";
  * to generate and manipulate ID values, including the ability to create new IDs, convert them
  * to a shorter format, clone them, and check for equality.
  */
-export class ID<T = string> implements UID<T> {
+export class ID implements UID<string | number> {
 	protected readonly __kind = "ID" as const;
 
 	readonly #maxSize: number = 16;
+	private _isNew: boolean;
+	private _value: string;
 	#createdAt: Date;
-	#isNew: boolean;
-	#value: string;
 
-	private constructor(id?: T) {
+	private constructor(id?: string | number) {
 		this.#createdAt = new Date();
 
 		if (typeof id === "undefined") {
 			const uuid = UUID();
-			this.#value = uuid;
-			this.#isNew = true;
+			this._value = uuid;
+			this._isNew = true;
 			return;
 		}
 
-		const isString = typeof id === "string";
-		this.#value = isString ? (id as unknown as string) : String(id);
-		this.#isNew = false;
+		if (!validator.isString(id) && !validator.isNumber(id)) {
+			throw new TypeError("ID must be a string or number");
+		}
+
+		this._value = String(id);
+		this._isNew = false;
 	}
 
 	/**
@@ -38,7 +42,7 @@ export class ID<T = string> implements UID<T> {
 	 * @param id Optional value to initialize the ID with. If not provided, a new UUID is created.
 	 * @returns A `UID` instance.
 	 */
-	public static create<T = string | number>(id?: T): UID<string> {
+	public static create(id?: string | number): UID<string> {
 		return new ID(id) as unknown as UID<string>;
 	}
 
@@ -49,8 +53,8 @@ export class ID<T = string> implements UID<T> {
 	 *
 	 * @returns A cloned `UID` instance identical to the current one.
 	 */
-	public clone(): UID<T> {
-		return new ID(this.#value) as unknown as UID<T>;
+	public clone(): UID<string | number> {
+		return new ID(this._value) as unknown as UID<string | number>;
 	}
 
 	/**
@@ -61,7 +65,7 @@ export class ID<T = string> implements UID<T> {
 	 * @returns A cloned `UID` instance that is considered new.
 	 */
 	public cloneAsNew(): UID<string> {
-		const newUUID = new ID<string>(this.#value);
+		const newUUID = new ID(this._value);
 		newUUID.setAsNew();
 		return newUUID;
 	}
@@ -99,8 +103,8 @@ export class ID<T = string> implements UID<T> {
 	 */
 	public equal(id: UID<unknown>): boolean {
 		return (
-			typeof this.#value === typeof id?.value() &&
-			(this.#value as unknown) === id?.value()
+			typeof this._value === typeof id?.value() &&
+			(this._value as unknown) === id?.value()
 		);
 	}
 
@@ -124,7 +128,7 @@ export class ID<T = string> implements UID<T> {
 	 * @returns `true` if the ID is new; otherwise, `false`.
 	 */
 	public isNew(): boolean {
-		return this.#isNew;
+		return this._isNew;
 	}
 
 	/**
@@ -134,7 +138,7 @@ export class ID<T = string> implements UID<T> {
 	 * @returns `true` if the ID is 16 bytes long, `false` otherwise.
 	 */
 	public isShort(): boolean {
-		return this.#value.length === this.#maxSize;
+		return this._value.length === this.#maxSize;
 	}
 
 	/**
@@ -142,7 +146,7 @@ export class ID<T = string> implements UID<T> {
 	 * Marks the current ID as new.
 	 */
 	private setAsNew(): void {
-		this.#isNew = true;
+		this._isNew = true;
 	}
 
 	/**
@@ -171,7 +175,7 @@ export class ID<T = string> implements UID<T> {
 	 */
 	public toShort(): UID<string> {
 		let short = "";
-		let longValue = this.#value;
+		let longValue = this._value;
 
 		if (longValue.length < this.#maxSize) {
 			longValue = UUID() + longValue;
@@ -185,7 +189,7 @@ export class ID<T = string> implements UID<T> {
 			short = lastChar + short;
 		}
 		this.#createdAt = new Date();
-		this.#value = short;
+		this._value = short;
 		return this as unknown as UID<string>;
 	}
 
@@ -196,7 +200,7 @@ export class ID<T = string> implements UID<T> {
 	 * @returns The ID value as a string.
 	 */
 	public value(): string {
-		return this.#value;
+		return this._value;
 	}
 }
 
