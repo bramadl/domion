@@ -1,18 +1,6 @@
-import { DomainError } from "../helpers/domain-error";
-import { DomainEvents } from "../helpers/domain-events";
-import { EventContext } from "../helpers/event-context";
-import { Result } from "../libs/result";
 import type { IEntityProps, IEntitySettings } from "../types/entity.types";
-import type {
-	AggregateEventMetrics,
-	BaseEventHandler,
-	BaseEventManager,
-	EventHandler,
-	EventPriorityOptions,
-} from "../types/event.types";
-import type { IResult } from "../types/result.types";
+import type { DomainEvent } from "../types/event.types";
 import type { UID } from "../types/uid.types";
-import type { AnyObject } from "../types/utils.types";
 import { Entity } from "./entity";
 import { ID } from "./id";
 
@@ -20,237 +8,215 @@ import { ID } from "./id";
  * @description
  * Represents an aggregate root — the consistency boundary of a domain model.
  *
- * An `Aggregate` extends `Entity` with domain event management capabilities.
- * It acts as the single entry point for mutations within its boundary, ensuring
- * that all invariants are maintained and that side effects are captured as events
- * to be dispatched after the operation succeeds.
+ * An `Aggregate` extends `Entity` with domain event collection. It is the
+ * single entry point for mutations within its boundary: domain methods mutate
+ * state and record **what happened** as `DomainEvent` objects via `emit()`.
+ * Events are plain data — they carry no handlers and no knowledge of how they
+ * will be consumed.
  *
- * Domain events registered via `addEvent()` are held in memory and can be dispatched
- * all at once via `dispatchAll()`, or individually via `dispatchEvent()`. Events are
- * removed after dispatch to enforce a fire-once guarantee.
+ * After a successful `repository.save()`, the application layer drains the
+ * event queue with `pullEvents()` and hands the events off to whatever
+ * transport it uses (`EventBus`, Redis Streams, BullMQ, etc.).
  *
- * @template Props The shape of the aggregate's domain properties.
+ * **Lifecycle**
+ * ```
+ * [Domain method] → emit(event)          records the fact
+ * [App layer]     → repo.save(aggregate) persists state
+ * [App layer]     → pullEvents()         drains the queue
+ * [App layer]     → bus.publishAll(...)  delivers the facts
+ * ```
+ *
+ * @template Props The shape of the aggregate's user-defined domain properties.
  *
  * @example
  * ```typescript
+ * interface OrderProps { customerId: string; status: string; total: number }
+ *
  * class Order extends Aggregate<OrderProps> {
- *     private constructor(props: OrderProps) { super(props); }
+ *     private constructor(props: EntityProps<OrderProps>) { super(props); }
  *
  *     public place(): void {
- *         this.addEvent('order:placed', async (aggregate) => {
- *             await notify(aggregate.id.value());
+ *         this.change('status', 'placed');
+ *         this.emit({
+ *             type: 'order:placed',
+ *             payload: { total: this.get('total') },
  *         });
  *     }
  *
- *     public static create(props: OrderProps): IResult<Order> {
- *         if (!this.isValidProps(props)) return Result.error('Invalid props');
- *         return Result.success(new Order(props));
+ *     public static override isValidProps(props: unknown): boolean {
+ *         return (
+ *             typeof (props as OrderProps)?.customerId === 'string' &&
+ *             typeof (props as OrderProps)?.total === 'number'
+ *         );
  *     }
  * }
+ *
+ * // Application layer
+ * const order = Order.init({ customerId: 'c-1', status: 'pending', total: 100 });
+ * order.place();
+ *
+ * await orderRepository.save(order);          // persist first
+ * await eventBus.publishAll(order.pullEvents()); // then publish
  * ```
  */
-export class Aggregate<Props extends IEntityProps> extends Entity<Props> {
+export abstract class Aggregate<
+	Props extends IEntityProps,
+> extends Entity<Props> {
 	/**
 	 * @description
-	 * Internal domain event collection for this aggregate instance.
-	 */
-	private domainEvents: DomainEvents<this>;
-
-	/**
-	 * @description
-	 * Marker used by `Validator` to distinguish aggregates from regular entities.
-	 *
+	 * Marker used by `Validator.isAggregate()` to distinguish aggregates from
+	 * plain entities without requiring an `instanceof` check.
 	 * @internal
 	 */
 	protected readonly __aggregate = true as const;
 
 	/**
-	 * @description
-	 * Running count of events that have been dispatched by this aggregate instance.
+	 * @description Pending domain events waiting to be pulled and published.
 	 */
-	private dispatchedCount = 0;
+	private _domainEvents: DomainEvent[] = [];
 
 	/**
 	 * @description
-	 * Initializes a new `Aggregate` instance.
+	 * Initialises a new `Aggregate` instance.
 	 *
-	 * @param props The domain properties for this aggregate.
+	 * @param props  The domain properties for this aggregate.
 	 * @param config Optional settings to disable getters or setters.
-	 * @param events Optional pre-existing `DomainEvents` instance, used when cloning with `copyEvents`.
 	 */
-	constructor(
-		props: Props,
-		config?: IEntitySettings,
-		events?: DomainEvents<Aggregate<Props>>,
-	) {
+	protected constructor(props: Props, config?: IEntitySettings) {
 		super(props, config);
-		this.domainEvents = events
-			? (events as unknown as DomainEvents<this>)
-			: new DomainEvents(this);
 	}
 
 	/**
 	 * @description
-	 * Registers a domain event on this aggregate using either a structured
-	 * `BaseEventHandler` instance or an inline handler function.
+	 * Records a domain event on this aggregate.
 	 *
-	 * If an event with the same name already exists, it is replaced.
+	 * Call `emit()` inside domain methods after a successful state change to
+	 * capture the fact as a `DomainEvent`. The `aggregateId`, `aggregateName`,
+	 * and `occurredAt` fields are filled in automatically — only `type` and
+	 * `payload` are required from the caller.
 	 *
-	 * @param eventNameOrHandler The event name (string) or a `BaseEventHandler` instance.
-	 * @param handler The handler function (required when `eventNameOrHandler` is a string).
-	 * @param options Optional priority configuration.
+	 * Events are held in memory until `pullEvents()` is called.
 	 *
-	 * @throws {DomainError} If the event name is invalid or the handler is not a function.
+	 * @param event A partial `DomainEvent` — `type` is required, `payload` is optional.
 	 *
 	 * @example
 	 * ```typescript
-	 * // Inline handler
-	 * order.addEvent('order:placed', async (aggregate) => {
-	 *     await notify(aggregate.id.value());
-	 * });
+	 * // Inline (most common)
+	 * this.emit({ type: 'order:placed', payload: { total: 100 } });
 	 *
-	 * // Structured handler
-	 * order.addEvent(new OrderPlacedHandler());
+	 * // Via BaseDomainEvent subclass (OOP style, optional)
+	 * this.emit(new OrderPlacedEvent(this.id.value(), { total: 100 }));
 	 * ```
 	 */
-	public addEvent(event: BaseEventHandler<this>): void;
-	public addEvent(
-		eventName: string,
-		handler: EventHandler<this>,
-		options?: EventPriorityOptions,
-	): void;
-	public addEvent(
-		eventNameOrHandler: string | BaseEventHandler<this>,
-		handler?: EventHandler<this>,
-		options?: EventPriorityOptions,
+	protected emit<TPayload = unknown>(
+		event:
+			| Pick<DomainEvent<TPayload>, "type" | "payload">
+			| DomainEvent<TPayload>,
 	): void {
-		if (typeof eventNameOrHandler === "string") {
-			if (!handler) {
-				throw new DomainError(
-					`Handler is required when registering event "${eventNameOrHandler}" by name.`,
-				);
-			}
-			this.domainEvents.addEvent(eventNameOrHandler, handler, options);
-			return;
-		}
+		const aggregateName =
+			Reflect.getPrototypeOf(this)?.constructor?.name ?? "Aggregate";
 
-		const structured = eventNameOrHandler as BaseEventHandler<this>;
-		this.domainEvents.addEvent(
-			structured.params.eventName,
-			structured.dispatch as EventHandler<this>,
-			structured.params.options,
-		);
+		const full: DomainEvent<TPayload> = Object.freeze({
+			...(event as DomainEvent<TPayload>),
+			aggregateId: this.id.value(),
+			aggregateName,
+			occurredAt: new Date(),
+		});
+
+		this._domainEvents.push(full as DomainEvent);
 	}
 
 	/**
 	 * @description
-	 * Removes all registered domain events from this aggregate.
+	 * Returns all pending domain events and clears the internal queue.
 	 *
-	 * @param options.resetMetrics If `true`, resets the dispatched event counter to zero.
+	 * **Always call this after `repository.save()` succeeds**, never before —
+	 * pulling before persist risks delivering events for a state that was never
+	 * committed (phantom events).
+	 *
+	 * The returned array is frozen. If you need to inspect events without
+	 * consuming them, use `peekEvents()` instead.
+	 *
+	 * @returns A frozen, ordered snapshot of all pending `DomainEvent` objects.
+	 *
+	 * @example
+	 * ```typescript
+	 * // Application layer (use case / command handler)
+	 * await repo.save(order);
+	 * await bus.publishAll(order.pullEvents());
+	 * ```
 	 */
-	public clearEvents(options: { resetMetrics?: boolean } = {}): void {
-		if (options.resetMetrics) this.dispatchedCount = 0;
-		this.domainEvents.clearEvents();
+	public pullEvents(): ReadonlyArray<DomainEvent> {
+		const snapshot = Object.freeze([...this._domainEvents]);
+		this._domainEvents = [];
+		return snapshot;
+	}
+
+	/**
+	 * @description
+	 * Returns a snapshot of pending events **without** clearing the queue.
+	 *
+	 * Useful for logging, testing assertions, or conditional logic that needs
+	 * to inspect events before deciding whether to publish them.
+	 *
+	 * @returns A frozen, ordered snapshot of the current pending events.
+	 */
+	public peekEvents(): ReadonlyArray<DomainEvent> {
+		return Object.freeze([...this._domainEvents]);
+	}
+
+	/**
+	 * @description
+	 * Returns the number of domain events currently pending in the queue.
+	 */
+	public get eventCount(): number {
+		return this._domainEvents.length;
+	}
+
+	/**
+	 * @description
+	 * Discards all pending domain events without publishing them.
+	 *
+	 * Use sparingly — in most cases events should be published, not discarded.
+	 * Useful in tests or when an operation is rolled back before persist.
+	 *
+	 * @returns The number of events cleared.
+	 */
+	public clearEvents(): number {
+		const count = this._domainEvents.length;
+		this._domainEvents = [];
+		return count;
 	}
 
 	/**
 	 * @description
 	 * Creates a deep clone of this aggregate, optionally overriding some properties.
 	 *
-	 * Pass `{ copyEvents: true }` to carry over registered (undispatched) domain events
-	 * to the cloned instance.
+	 * Pending domain events are **not** copied to the clone by default — events
+	 * belong to the instance that produced them. Pass `{ withEvents: true }` to
+	 * carry them over (e.g. when re-trying a failed publish).
 	 *
 	 * @param props Optional partial properties and clone options.
 	 * @returns A new instance of the same `Aggregate` subclass.
 	 */
 	public override clone(
-		props?: Partial<Props> & { copyEvents?: boolean },
+		props?: Partial<Props> & { withEvents?: boolean },
 	): this {
 		const proto = Reflect.getPrototypeOf(this);
 		const ctor = proto?.constructor ?? this.constructor;
 
-		// Destructure copyEvents out so it is never spread into domain props
-		const { copyEvents, ...domainProps } = (props ?? {}) as Partial<Props> & {
-			copyEvents?: boolean;
+		const { withEvents, ...domainProps } = (props ?? {}) as Partial<Props> & {
+			withEvents?: boolean;
 		};
 
 		const merged = { ...this.props, ...domainProps };
 		const clone = Reflect.construct(ctor, [merged, this.config]) as this;
 
-		if (copyEvents) {
-			clone.domainEvents = this.domainEvents.cloneFor(clone);
+		if (withEvents) {
+			clone._domainEvents = [...this._domainEvents];
 		}
 
 		return clone;
-	}
-
-	/**
-	 * @description
-	 * Returns the application-level event manager for the current runtime environment.
-	 * Backed by `EventContext`, which resolves to `ServerEventManager` or `BrowserEventManager`.
-	 *
-	 * @returns The platform-specific `BaseEventManager` instance.
-	 */
-	public context(): BaseEventManager {
-		return EventContext.resolve();
-	}
-
-	/**
-	 * @description
-	 * Removes all events matching the provided event name.
-	 *
-	 * @param eventName The name of the event to remove.
-	 * @returns The number of events removed.
-	 */
-	public deleteEvent(eventName: string): number {
-		const before = this.domainEvents.metrics.totalEvents();
-		this.domainEvents.removeEvent(eventName);
-		return before - this.domainEvents.metrics.totalEvents();
-	}
-
-	/**
-	 * @description
-	 * Dispatches all registered domain events in priority order and clears the event collection.
-	 *
-	 * @returns A `Promise` that resolves once all handlers have settled.
-	 * @throws Re-throws any error raised by an event handler.
-	 */
-	public async dispatchAll(): Promise<void> {
-		const count = await this.domainEvents.dispatchAll();
-		this.dispatchedCount += count;
-	}
-
-	/**
-	 * @description
-	 * Dispatches a single event by name. The event is removed after dispatch.
-	 * Async handlers are awaited before `dispatchedCount` is incremented, ensuring
-	 * the metric only reflects events that have fully settled.
-	 *
-	 * @param eventName The name of the event to dispatch.
-	 * @param args Additional arguments forwarded to the event handler.
-	 * @returns A `Promise` that resolves once the handler has settled.
-	 */
-	public async dispatchEvent(
-		eventName: string,
-		...args: unknown[]
-	): Promise<void> {
-		const dispatched = await this.domainEvents.dispatchEvent(
-			eventName,
-			...args,
-		);
-		if (dispatched) this.dispatchedCount++;
-	}
-
-	/**
-	 * @description
-	 * A metrics snapshot of this aggregate's domain event activity.
-	 *
-	 * @property current   Number of currently registered (undispatched) events.
-	 * @property dispatch  Total number of events dispatched so far.
-	 * @property total     Sum of current and dispatched events.
-	 */
-	public get eventsMetrics(): AggregateEventMetrics {
-		return this.domainEvents.snapshot(this.dispatchedCount);
 	}
 
 	/**
@@ -262,28 +228,7 @@ export class Aggregate<Props extends IEntityProps> extends Entity<Props> {
 	 * @returns A `UID<string>` representing this aggregate's hash code.
 	 */
 	public override hashCode(): UID<string> {
-		const proto = Reflect.getPrototypeOf(this);
-		const name = proto?.constructor?.name ?? "Aggregate";
-		return ID.create(`[Aggregate@${name}]:${this._id.value()}`);
-	}
-
-	/**
-	 * @description
-	 * Creates a new `Aggregate` instance wrapped in a `Result`.
-	 * Returns `Result.error()` if `isValidProps()` returns `false`.
-	 *
-	 * @param props The properties to validate and construct the aggregate with.
-	 * @returns A `Result` containing the new instance on success, or an error on failure.
-	 */
-	public static override create(props: unknown): IResult<unknown, string> {
-		// biome-ignore lint/complexity/noThisInStatic: Base factories must validate through the subclass constructor.
-		if (!this.isValidProps(props)) {
-			return Result.error(
-				// biome-ignore lint/complexity/noThisInStatic: Error messages should name the concrete subclass.
-				`Failed to create "${this.name}": invalid properties. ` +
-					`Ensure all required fields are present and valid.`,
-			);
-		}
-		return Result.success(new this(props as AnyObject));
+		const name = Reflect.getPrototypeOf(this)?.constructor?.name ?? "Aggregate";
+		return ID.create(`[Aggregate@${name}]:${this.id.value()}`);
 	}
 }
