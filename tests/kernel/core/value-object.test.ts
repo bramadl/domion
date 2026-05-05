@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { DomainError } from "../../src/kernel/helpers/domain-error";
-import { ID } from "../../src/kernel/core/id";
-import { ValueObject } from "../../src/kernel/core/value-object";
-import { Result, type Adapter, type IAdapter, type UID } from "../../src/kernel";
+import { type Adapter, type IAdapter, Result, type UID } from "../../../src/kernel";
+import { DomainError } from "../../../src/kernel/helpers/domain-error";
+import { ID } from "../../../src/kernel/core/id";
+import { ValueObject } from "../../../src/kernel/core/value-object";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -17,10 +17,10 @@ class Age extends ValueObject<AgeProps> {
 
 	public static override isValidProps(props: AgeProps): boolean {
 		return (
-			this.validator.isObject(props) &&
-			!this.validator.isNull(props) &&
-			this.validator.isNumber(props.value) &&
-			this.validator.number(props.value).isGreaterOrEqualTo(0)
+			Age.validator.isObject(props) &&
+			!Age.validator.isNull(props) &&
+			Age.validator.isNumber(props.value) &&
+			Age.validator.number(props.value).isGreaterOrEqualTo(0)
 		);
 	}
 }
@@ -37,15 +37,17 @@ class Money extends ValueObject<MoneyProps> {
 
 	public static override isValidProps(props: MoneyProps): boolean {
 		return (
-			this.validator.isObject(props) &&
-			!this.validator.isNull(props) &&
-			this.validator.isNumber(props.amount) &&
-			this.validator.isString(props.currency)
+			Money.validator.isObject(props) &&
+			!Money.validator.isNull(props) &&
+			Money.validator.isNumber(props.amount) &&
+			Money.validator.isString(props.currency)
 		);
 	}
 }
 
-class NestedValue extends ValueObject<{ meta: { name: string; power: number } }> {
+class NestedValue extends ValueObject<{
+	meta: { name: string; power: number };
+}> {
 	constructor(props: { meta: { name: string; power: number } }) {
 		super(props);
 	}
@@ -100,13 +102,17 @@ describe("[Core] ValueObject", () => {
 			});
 
 			test("base isValidProps rejects null", () => {
-				const result = NestedValue.create(null as unknown as { meta: { name: string; power: number } });
+				const result = NestedValue.create(
+					null as unknown as { meta: { name: string; power: number } },
+				);
 
 				expect(result.isError()).toBe(true);
 			});
 
 			test("base isValidProps rejects undefined", () => {
-				const result = NestedValue.create(undefined as unknown as { meta: { name: string; power: number } });
+				const result = NestedValue.create(
+					undefined as unknown as { meta: { name: string; power: number } },
+				);
 
 				expect(result.isError()).toBe(true);
 			});
@@ -197,7 +203,11 @@ describe("[Core] ValueObject", () => {
 			test("props remain unchanged after a failed mutation attempt", () => {
 				const age = Age.create({ value: 10 }).value();
 
-				try { age.change("value", 99); } catch { /* expected */ }
+				try {
+					age.change("value", 99);
+				} catch {
+					/* expected */
+				}
 
 				expect(age.get("value")).toBe(10);
 			});
@@ -340,13 +350,19 @@ describe("[Core] ValueObject", () => {
 			});
 
 			test("serializes nested object props correctly", () => {
-				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const nested = new NestedValue({
+					meta: { name: "Pikachu", power: 55 },
+				});
 
-				expect(nested.toObject()).toEqual({ meta: { name: "Pikachu", power: 55 } });
+				expect(nested.toObject()).toEqual({
+					meta: { name: "Pikachu", power: 55 },
+				});
 			});
 
 			test("returns a deeply frozen object for object props", () => {
-				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const nested = new NestedValue({
+					meta: { name: "Pikachu", power: 55 },
+				});
 				const result = nested.toObject();
 
 				expect(Object.isFrozen(result)).toBe(true);
@@ -354,10 +370,14 @@ describe("[Core] ValueObject", () => {
 			});
 
 			test("mutation on the frozen result throws", () => {
-				const nested = new NestedValue({ meta: { name: "Pikachu", power: 55 } });
+				const nested = new NestedValue({
+					meta: { name: "Pikachu", power: 55 },
+				});
 				const result = nested.toObject() as { meta: { name: string } };
 
-				expect(() => { result.meta.name = "Raichu"; }).toThrow();
+				expect(() => {
+					result.meta.name = "Raichu";
+				}).toThrow();
 			});
 
 			test("returns primitive value as-is without freezing", () => {

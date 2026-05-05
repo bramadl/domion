@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { Aggregate } from "../../src/kernel/core/aggregate";
-import { DomainError } from "../../src/kernel/helpers/domain-error";
+import { DomainError } from "../../../src/kernel/helpers/domain-error";
+import { Aggregate } from "../../../src/kernel/core/aggregate";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -16,10 +16,10 @@ class Order extends Aggregate<OrderProps> {
 
 	public static override isValidProps(props: OrderProps): boolean {
 		return (
-			this.validator.isObject(props) &&
-			this.validator.isString(props.status) &&
-			!this.validator.string(props.status).isEmpty() &&
-			this.validator.isNumber(props.total)
+			Order.validator.isObject(props) &&
+			Order.validator.isString(props.status) &&
+			!Order.validator.string(props.status).isEmpty() &&
+			Order.validator.isNumber(props.total)
 		);
 	}
 
@@ -74,9 +74,9 @@ describe("[Core] Aggregate", () => {
 				order.place();
 
 				const events = order.peekEvents();
-        expect(events).toHaveLength(1);
+				expect(events).toHaveLength(1);
 
-        const event = events[0]!
+				const event = events[0]!;
 				expect(event).toMatchObject({
 					type: "order:placed",
 					payload: { total: 100 },
@@ -92,9 +92,9 @@ describe("[Core] Aggregate", () => {
 				order.cancel();
 
 				const events = order.peekEvents();
-        expect(events).toHaveLength(1);
+				expect(events).toHaveLength(1);
 
-        const event = events[0]!
+				const event = events[0]!;
 				expect(event.type).toBe("order:cancelled");
 				expect(event.payload).toBeUndefined();
 			});
@@ -104,7 +104,7 @@ describe("[Core] Aggregate", () => {
 
 				order.place();
 
-				const event = order.peekEvents()[0]
+				const event = order.peekEvents()[0];
 
 				expect(Object.isFrozen(event)).toBe(true);
 			});
@@ -185,54 +185,54 @@ describe("[Core] Aggregate", () => {
 		});
 	});
 
-  describe("Instance Methods", () => {
-    describe("clone()", () => {
-      test("clones without copying events by default", () => {
-        const order = Order.init({ status: "pending", total: 100 });
-        order.place();
+	describe("Instance Methods", () => {
+		describe("clone()", () => {
+			test("clones without copying events by default", () => {
+				const order = Order.init({ status: "pending", total: 100 });
+				order.place();
 
-        const cloned = order.clone();
+				const cloned = order.clone();
 
-        expect(cloned).toBeInstanceOf(Order);
-        expect(cloned).not.toBe(order);
-        expect(cloned.eventCount).toBe(0);
-      });
+				expect(cloned).toBeInstanceOf(Order);
+				expect(cloned).not.toBe(order);
+				expect(cloned.eventCount).toBe(0);
+			});
 
-      test("clones WITH events when withEvents = true", () => {
-        const order = Order.init({ status: "pending", total: 100 });
-        order.place();
+			test("clones WITH events when withEvents = true", () => {
+				const order = Order.init({ status: "pending", total: 100 });
+				order.place();
 
-        const cloned = order.clone({ withEvents: true });
+				const cloned = order.clone({ withEvents: true });
 
-        expect(cloned.eventCount).toBe(1);
-        expect(cloned.peekEvents()).toHaveLength(1);
-      });
+				expect(cloned.eventCount).toBe(1);
+				expect(cloned.peekEvents()).toHaveLength(1);
+			});
 
-      test("overrides props while cloning", () => {
-        const order = Order.init({ status: "pending", total: 100 });
+			test("overrides props while cloning", () => {
+				const order = Order.init({ status: "pending", total: 100 });
 
-        const cloned = order.clone({ status: "placed" });
+				const cloned = order.clone({ status: "placed" });
 
-        expect(cloned.get("status")).toBe("placed");
-        expect(order.get("status")).toBe("pending");
-      });
-    });
+				expect(cloned.get("status")).toBe("placed");
+				expect(order.get("status")).toBe("pending");
+			});
+		});
 
-    describe("hashCode()", () => {
-      test("format is [Aggregate@ClassName]:uuid", () => {
-        const order = Order.init({ status: "pending", total: 100 });
+		describe("hashCode()", () => {
+			test("format is [Aggregate@ClassName]:uuid", () => {
+				const order = Order.init({ status: "pending", total: 100 });
 
-        expect(order.hashCode().value()).toMatch(/^\[Aggregate@Order\]:.+$/);
-      });
+				expect(order.hashCode().value()).toMatch(/^\[Aggregate@Order\]:.+$/);
+			});
 
-      test("different instances produce different hash codes", () => {
-        const a = Order.init({ status: "pending", total: 100 });
-        const b = Order.init({ status: "pending", total: 100 });
+			test("different instances produce different hash codes", () => {
+				const a = Order.init({ status: "pending", total: 100 });
+				const b = Order.init({ status: "pending", total: 100 });
 
-        expect(a.hashCode().value()).not.toBe(b.hashCode().value());
-      });
-    });
-  })
+				expect(a.hashCode().value()).not.toBe(b.hashCode().value());
+			});
+		});
+	});
 
 	describe("Event lifecycle consistency", () => {
 		test("events persist until pulled or cleared", async () => {
@@ -255,10 +255,10 @@ describe("[Core] Aggregate", () => {
 
 			expect(order.eventCount).toBe(1);
 
-      const events = order.peekEvents();
-      expect(events).toHaveLength(1);
+			const events = order.peekEvents();
+			expect(events).toHaveLength(1);
 
-      const event = events[0]!
+			const event = events[0]!;
 			expect(event.type).toBe("order:cancelled");
 		});
 	});
