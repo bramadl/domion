@@ -1,0 +1,20 @@
+import type { IUseCase, IResult } from "{{importAlias}}";
+
+interface {{className}}Input {
+  // define input
+}
+
+interface {{className}}Output {
+  // define output
+}
+
+interface {{className}}Metadata {
+  // define output or assign void to the generic instead
+}
+
+export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output> {
+  async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, {{className}}Metadata>> {
+    // implement use case
+    throw new Error("Method not implemented")
+  }
+}

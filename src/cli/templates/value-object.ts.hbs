@@ -1,0 +1,16 @@
+import { ValueObject } from "{{importAlias}}";
+
+interface {{className}}Props {
+  // define props
+}
+
+export class {{className}} extends ValueObject<{{className}}Props> {
+  private constructor(props: {{className}}Props) {
+    super(props);
+  }
+
+  public static override isValidProps(props: {{className}}Props): boolean {
+    // use {{className}}.validator helpers if needed
+    throw new Error("Method not implemented")
+  }
+}
