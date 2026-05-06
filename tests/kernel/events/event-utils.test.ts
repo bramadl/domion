@@ -8,6 +8,12 @@ describe("[Core] ValidateEventName", () => {
 		expect(() => ValidateEventName("payment:completed")).not.toThrow();
 	});
 
+  test("accepts valid event names with hyphens and numbers", () => {
+    expect(() => ValidateEventName("order:email-changed")).not.toThrow();
+    expect(() => ValidateEventName("user:registration-completed")).not.toThrow();
+    expect(() => ValidateEventName("payment2:failed")).not.toThrow();
+  });
+
 	test("throws for missing colon", () => {
 		expect(() => ValidateEventName("orderplaced")).toThrow();
 	});
@@ -40,4 +46,21 @@ describe("[Core] ValidateEventName", () => {
 		expect(() => ValidateEventName(123 as any)).toThrow();
 		expect(() => ValidateEventName({} as any)).toThrow();
 	});
+
+  test("throws for special, uppercase, or invalid characters", () => {
+    // special chars
+    expect(() => ValidateEventName("order placed")).toThrow();
+    expect(() => ValidateEventName("order@placed")).toThrow();
+    expect(() => ValidateEventName("order#placed")).toThrow();
+
+    // uppercase
+    expect(() => ValidateEventName("Order:placed")).toThrow();
+    expect(() => ValidateEventName("order:Placed")).toThrow();
+    expect(() => ValidateEventName("ORDER:PLACED")).toThrow();
+
+    // starts with number or hyphen
+    expect(() => ValidateEventName("1order:placed")).toThrow();
+    expect(() => ValidateEventName("order:1placed")).toThrow();
+    expect(() => ValidateEventName("-order:placed")).toThrow();
+  });
 });
