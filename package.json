@@ -1,23 +1,39 @@
 {
-  "name": "@toolkit/ddd",
+  "name": "domion",
   "version": "0.1.0",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "bin": {
-    "toolkit-ddd": "./dist/cli/index.js"
-  },
-  "files": [
-    "dist/",
-    "README.md",
-    "LICENSE"
+  "description": "Headless DDD primitives CLI for TypeScript — own your domain",
+  "keywords": [
+    "ddd",
+    "domain-driven-design",
+    "cli",
+    "codegen",
+    "typescript",
+    "scaffold",
+    "architecture"
   ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bramadl/domion.git"
+  },
+  "type": "module",
+  "private": false,
+  "bin": {
+    "domion": "./dist/cli/index.js"
+  },
+  "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
-    "build": "tsup",
+    "release:patch": "./scripts/release.sh patch",
+    "release:minor": "./scripts/release.sh minor",
+    "release:major": "./scripts/release.sh major",
+    "build": "tsup && node scripts/copy.mjs",
     "dev": "tsup --watch",
     "test": "bun test",
     "lint": "biome check src/",
     "format": "biome format src/ --write"
+  },
+  "engines": {
+    "node": ">=18 || >=20"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.14",
@@ -29,10 +45,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.4.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
-    "enquirer": "^2.4.1",
     "fs-extra": "^11.3.4",
+    "handlebars": "^4.7.9",
     "ora": "^9.4.0"
   }
 }
