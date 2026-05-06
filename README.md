@@ -1,7 +1,7 @@
-# Domion
+# Drimion
 
-![version](https://img.shields.io/npm/v/domion?label=version)
-![license](https://img.shields.io/npm/l/domion)
+![version](https://img.shields.io/npm/v/drimion?label=version)
+![license](https://img.shields.io/npm/l/drimion)
 
 **Headless DDD primitives CLI for TypeScript**
 
@@ -46,7 +46,7 @@ A developer-first CLI tool for bringing Domain-Driven Design (DDD) primitives in
 
 ## Philosophy
 
-`domion` does **NOT**:
+`drimion` does **NOT**:
 
 - ❌ Enforce folder structure
 - ❌ Dictate architecture (layered, modular, etc.)
@@ -123,22 +123,22 @@ Run directly with your preferred package manager — **no global install needed*
 
 ```bash
 # npm
-npx domion init
+npx drimion init
 
 # yarn
-yarn dlx domion init
+yarn dlx drimion init
 
 # pnpm
-pnpm dlx domion init
+pnpm dlx drimion init
 
 # bun
-bunx --bun domion init
+bunx --bun drimion init
 ```
 
 Running `init -y` will skip interactive prompts and install defaults and:
 
-1. Copy the library core into your project under `src/lib/domion`
-2. Create a `domion.config.ts` configuration file
+1. Copy the library core into your project under `src/lib/drimion`
+2. Create a `drimion.config.ts` configuration file
 3. Prepare your project for code generators
 
 ### Configuration File
@@ -146,14 +146,14 @@ Running `init -y` will skip interactive prompts and install defaults and:
 Below is the default configuration file created for you.
 
 ```ts
-// domion.config.ts
+// drimion.config.ts
 export default {
-  domion: {
+  drimion: {
     // Where the library source files are installed
-    corePath: "src/lib/domion",
+    corePath: "src/lib/drimion",
 
     // Import alias to use in your project (configure in tsconfig.json paths)
-    importAlias: "domion",
+    importAlias: "drimion",
 
     // File naming convention for generated files
     // Options: "kebab-case" | "snake_case" | "PascalCase"
@@ -205,7 +205,7 @@ targets: {
 Then use it with:
 
 ```bash
-npx domion generate entity --name=User --target=user
+npx drimion generate entity --name=User --target=user
 ```
 
 ### Recommended Structure
@@ -215,7 +215,7 @@ This library is **headless** — it does not enforce any folder structure. Below
 ```
 src/
 ├── lib/
-│   └── domion/        ← library source lives here (yours to modify)
+│   └── drimion/        ← library source lives here (yours to modify)
 │
 └── modules/
     └── [module-name]/
@@ -357,7 +357,7 @@ class UserRepository extends BaseRepository<User> {
 Use cases are the entry points to your application logic. This library provides two interfaces to model them: `ICommand` for operations that mutate state, and `IQuery` for read-only operations.
 
 ```typescript
-import type { ICommand, IQuery } from "domion";
+import type { ICommand, IQuery } from "drimion";
 
 // Mutates state — returns Result
 class PlaceOrderUseCase implements ICommand<PlaceOrderInput, Order> {
@@ -799,7 +799,7 @@ manager.dispatchEvent("order:*"); // dispatches all events matching 'order:*'
 Display CLI version and a full command reference.
 
 ```bash
-npx domion info
+npx drimion info
 ```
 
 ### init
@@ -807,14 +807,14 @@ npx domion info
 Initialize the library in your project.
 
 ```bash
-npx domion init        # interactive
-npx domion init -y     # skip all prompts
+npx drimion init        # interactive
+npx drimion init -y     # skip all prompts
 ```
 
 **What it does:**
 
-1. Copies library source files into `src/lib/domion`
-2. Creates `domion.config.ts` in your project root
+1. Copies library source files into `src/lib/drimion`
+2. Creates `drimion.config.ts` in your project root
 3. Prepares your project for generators
 
 **Flags:**
@@ -828,7 +828,7 @@ npx domion init -y     # skip all prompts
 List all available code generators.
 
 ```bash
-npx domion list
+npx drimion list
 ```
 
 ```
@@ -846,28 +846,28 @@ Available generators:
 Generate a domain building block from a template.
 
 ```bash
-npx domion generate                                         # fully interactive
-npx domion generate <type> --name=<Name>                    # with type and name
-npx domion generate <type> --name=<Name> --target=<t>       # resolve path from config
-npx domion generate <type> --name=<Name> --location=<path>  # explicit path
+npx drimion generate                                         # fully interactive
+npx drimion generate <type> --name=<Name>                    # with type and name
+npx drimion generate <type> --name=<Name> --target=<t>       # resolve path from config
+npx drimion generate <type> --name=<Name> --location=<path>  # explicit path
 ```
 
 **Examples:**
 
 ```bash
 # Generate with an explicit output path
-npx domion generate entity --name=User --location=src/modules/user/domain/entities
+npx drimion generate entity --name=User --location=src/modules/user/domain/entities
 
-# Generate using a predefined target from domion.config.ts
-npx domion generate value-object --name=Email --target=user
+# Generate using a predefined target from drimion.config.ts
+npx drimion generate value-object --name=Email --target=user
 
 # Generate using aliases
-npx domion generate entity -n=User -l=src/modules/user/domain/entities
-npx domion generate entity -n User -l src/modules/user/domain/entities
-npx domion generate value-object -n Email -t user
+npx drimion generate entity -n=User -l=src/modules/user/domain/entities
+npx drimion generate entity -n User -l src/modules/user/domain/entities
+npx drimion generate value-object -n Email -t user
 
 # Fully interactive — prompts for type, name, and destination
-npx domion generate
+npx drimion generate
 ```
 
 **Flags:**
@@ -875,7 +875,7 @@ npx domion generate
 | Flag         | Alias | Description                                                   |
 | ------------ | ----- | ------------------------------------------------------------- |
 | `--name`     | `-n`  | Name of the class to generate (auto-normalized to PascalCase) |
-| `--target`   | `-t`  | Use a predefined path from `targets` in `domion.config.ts`    |
+| `--target`   | `-t`  | Use a predefined path from `targets` in `drimion.config.ts`   |
 | `--location` | `-l`  | Manually specify the output directory                         |
 
 **Name normalization:**
@@ -894,8 +894,8 @@ All names are automatically normalized to **PascalCase** for class usage. The CL
 Update the library source files to the latest version.
 
 ```bash
-npx domion sync     # interactive
-npx domion sync -f  # force overwrite — no prompts, no backup
+npx drimion sync     # interactive
+npx drimion sync -f  # force overwrite — no prompts, no backup
 ```
 
 When a new version is detected, you are prompted:
@@ -913,7 +913,7 @@ What do you want to do?
 Choosing option 3 moves your current files to:
 
 ```
-src/lib/domion/__backup__/vX.X.X
+src/lib/drimion/__backup__/vX.X.X
 ```
 
 This way, you can safely resolve your own changes to the newest version available.
@@ -921,7 +921,7 @@ This way, you can safely resolve your own changes to the newest version availabl
 > ⚠️ Add the backup directory to `.gitignore`:
 >
 > ```
-> src/lib/domion/__backup__/
+> src/lib/drimion/__backup__/
 > ```
 
 **Flags:**
@@ -935,7 +935,7 @@ This way, you can safely resolve your own changes to the newest version availabl
 Uninstall the library completely.
 
 ```bash
-npx domion uninstall
+npx drimion uninstall
 ```
 
 This will locate both the config file and the library directory if exists and

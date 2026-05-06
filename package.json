@@ -1,5 +1,5 @@
 {
-  "name": "domion",
+  "name": "drimion",
   "version": "0.1.0",
   "description": "Headless DDD primitives CLI for TypeScript — own your domain",
   "keywords": [
@@ -14,12 +14,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bramadl/domion.git"
+    "url": "git+https://github.com/bramadl/drimion.git"
   },
   "type": "module",
   "private": false,
   "bin": {
-    "domion": "dist/cli/index.js"
+    "drimion": "dist/cli/index.js"
   },
   "files": [
     "dist/",

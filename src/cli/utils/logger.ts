@@ -18,7 +18,7 @@ export const logger = {
 			console.log();
 			console.log(
 				chalk.cyan.bold(
-					"  Domion - Headless DDD primitives CLI for TypeScript",
+					`  ${__PKG_NAME__} - Headless DDD primitives CLI for TypeScript`,
 				),
 			);
 		}

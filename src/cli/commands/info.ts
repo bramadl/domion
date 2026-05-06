@@ -16,14 +16,14 @@ interface CommandInfo {
 const COMMANDS: CommandInfo[] = [
 	{
 		name: "init",
-		description: "Initialize domion in your project.",
+		description: "Initialize drimion in your project.",
 		flags: [
 			{
 				flag: "-y, --yes",
 				description: "Skip all prompts and use defaults",
 			},
 		],
-		examples: ["npx domion init", "npx domion init -y"],
+		examples: ["npx drimion init", "npx drimion init -y"],
 	},
 	{
 		name: "generate",
@@ -38,21 +38,21 @@ const COMMANDS: CommandInfo[] = [
 			},
 			{
 				flag: "-t, --target <target>",
-				description: "Predefined target path from domion.config.ts",
+				description: "Predefined target path from drimion.config.ts",
 			},
 			{ flag: "-l, --location <path>", description: "Manual output directory" },
 		],
 		examples: [
-			"npx domion generate",
-			"npx domion generate entity -n User -t user",
-			"npx domion generate value-object -n Email -l src/modules/user/domain",
+			"npx drimion generate",
+			"npx drimion generate entity -n User -t user",
+			"npx drimion generate value-object -n Email -l src/modules/user/domain",
 		],
 	},
 	{
 		name: "list",
 		description:
-			"List all available generators and the targets configured in domion.config.ts.",
-		examples: ["npx domion list"],
+			"List all available generators and the targets configured in drimion.config.ts.",
+		examples: ["npx drimion list"],
 	},
 	{
 		name: "sync",
@@ -64,18 +64,18 @@ const COMMANDS: CommandInfo[] = [
 				description: "Overwrite everything — no prompts, no backup",
 			},
 		],
-		examples: ["npx domion sync", "npx domion sync -f"],
+		examples: ["npx drimion sync", "npx drimion sync -f"],
 	},
 	{
 		name: "uninstall",
 		description:
-			"Remove the library kernel and domion.config.ts from your project.",
-		examples: ["npx domion uninstall"],
+			"Remove the library kernel and drimion.config.ts from your project.",
+		examples: ["npx drimion uninstall"],
 	},
 	{
 		name: "info",
 		description: "Display CLI information and command reference.",
-		examples: ["npx domion info"],
+		examples: ["npx drimion info"],
 	},
 ];
 

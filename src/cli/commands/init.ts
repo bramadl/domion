@@ -16,8 +16,8 @@ interface InitAnswers {
 }
 
 const DEFAULTS: InitAnswers = {
-	corePath: "src/lib/domion",
-	importAlias: "domion",
+	corePath: "src/lib/drimion",
+	importAlias: "drimion",
 	naming: "kebab-case",
 };
 
@@ -61,7 +61,7 @@ async function askInitQuestions(): Promise<InitAnswers> {
 
 function buildConfigTemplate(answers: InitAnswers): string {
 	return `export default {
-  domion: {
+  drimion: {
     corePath: "${answers.corePath}",
     importAlias: "${answers.importAlias}",
     naming: "${answers.naming}",
@@ -92,17 +92,17 @@ function nextSteps(answers: InitAnswers) {
 		"",
 		`${step("2")} Run your first generator:`,
 		"",
-		`    ${chalk.cyan("npx domion generate")}`,
+		`    ${chalk.cyan("npx drimion generate")}`,
 		"",
 		`${step("3")} List available generators:`,
 		"",
-		`    ${chalk.cyan("npx domion list")}`,
+		`    ${chalk.cyan("npx drimion list")}`,
 		"",
 	];
 }
 
 export const initCommand = new Command("init")
-	.description("Initialize domion in your project")
+	.description("Initialize drimion in your project")
 	.option("-y, --yes", "Skip prompts and use defaults")
 	.action(async (options) => {
 		logger.banner();
@@ -132,7 +132,7 @@ export const initCommand = new Command("init")
 				}
 			}
 
-			const configPath = path.resolve(cwd, "domion.config.ts");
+			const configPath = path.resolve(cwd, "drimion.config.ts");
 			const kernelPath = path.resolve(cwd, answers.corePath);
 
 			const configExists = await fs.pathExists(configPath);
@@ -146,7 +146,7 @@ export const initCommand = new Command("init")
 					chalk.bold("Files already in place:"),
 					"",
 					`  ${chalk.dim("kernel →")} ${answers.corePath}`,
-					`  ${chalk.dim("config →")} domion.config.ts`,
+					`  ${chalk.dim("config →")} drimion.config.ts`,
 					"",
 					chalk.dim("Nothing was changed. To reinstall, remove them first."),
 					"",
@@ -168,10 +168,10 @@ export const initCommand = new Command("init")
 
 			// ── Config ────────────────────────────────────────────────
 			if (configExists) {
-				logger.warn("domion.config.ts already exists — skipping.");
+				logger.warn("drimion.config.ts already exists — skipping.");
 			} else {
 				await fs.writeFile(configPath, buildConfigTemplate(answers), "utf-8");
-				logger.success(`Config created    ${chalk.dim("→")} domion.config.ts`);
+				logger.success(`Config created    ${chalk.dim("→")} drimion.config.ts`);
 			}
 
 			// ── Next steps ────────────────────────────────────────────

@@ -14,12 +14,12 @@ function isCancelled(err: unknown): boolean {
 }
 
 export const uninstallCommand = new Command("uninstall")
-	.description("Remove domion kernel and config from your project")
+	.description("Remove drimion kernel and config from your project")
 	.action(async () => {
 		logger.banner();
 
 		const cwd = process.cwd();
-		const configPath = path.resolve(cwd, "domion.config.ts");
+		const configPath = path.resolve(cwd, "drimion.config.ts");
 
 		// ── Resolve what exists ───────────────────────────────────────
 		const configExists = await fs.pathExists(configPath);
@@ -27,9 +27,9 @@ export const uninstallCommand = new Command("uninstall")
 		let kernelPath: string;
 		try {
 			const config = await Resolver.loadConfig(cwd);
-			kernelPath = path.resolve(cwd, config.domion.corePath);
+			kernelPath = path.resolve(cwd, config.drimion.corePath);
 		} catch {
-			kernelPath = path.resolve(cwd, "src/lib/domion");
+			kernelPath = path.resolve(cwd, "src/lib/drimion");
 		}
 
 		const kernelExists = await fs.pathExists(kernelPath);
@@ -48,7 +48,7 @@ export const uninstallCommand = new Command("uninstall")
 			...(kernelExists
 				? [`  ${chalk.red("✖")} ${path.relative(cwd, kernelPath)}`]
 				: []),
-			...(configExists ? [`  ${chalk.red("✖")} domion.config.ts`] : []),
+			...(configExists ? [`  ${chalk.red("✖")} drimion.config.ts`] : []),
 		]);
 
 		// ── Confirm ───────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export const uninstallCommand = new Command("uninstall")
 
 		if (configExists) {
 			await fs.remove(configPath);
-			logger.success(`Removed  ${chalk.dim("→")} domion.config.ts`);
+			logger.success(`Removed  ${chalk.dim("→")} drimion.config.ts`);
 		}
 
 		console.log();

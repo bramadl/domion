@@ -14,7 +14,7 @@ export interface ResolveOutputOptions {
 }
 
 export interface ToolkitConfigOptions {
-	domion: {
+	drimion: {
 		corePath: string;
 		importAlias: string;
 		naming: NamingOptions;

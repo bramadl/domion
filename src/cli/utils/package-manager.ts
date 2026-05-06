@@ -35,7 +35,7 @@ export function resolvePackageManager() {
 	} catch {}
 
 	return {
-		__PKG_NAME__: "domion",
+		__PKG_NAME__: "drimion",
 		__PKG_VERSION__: "?",
 		__PKG_REPOSITORY__: "",
 	};

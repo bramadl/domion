@@ -36,7 +36,7 @@ export const listCommand = new Command("list")
 
 			for (const type of GENERATORS) {
 				const configKey = toConfigKey(type);
-				const targets = config.domion.targets?.[configKey] || {};
+				const targets = config.drimion.targets?.[configKey] || {};
 				const entries = Object.entries(targets);
 
 				if (entries.length === 0) {
@@ -68,7 +68,7 @@ export const listCommand = new Command("list")
 			logger.divider();
 			console.log();
 			logger.hint([
-				`Run ${chalk.cyan("npx domion generate")} to create a new file.`,
+				`Run ${chalk.cyan("npx drimion generate")} to create a new file.`,
 			]);
 			console.log();
 		} catch (err) {

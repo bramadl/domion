@@ -63,7 +63,7 @@ export const generateCommand = new Command("generate")
 				);
 			} else {
 				const configKey = toConfigKey(type);
-				const targets = config.domion.targets?.[configKey] || {};
+				const targets = config.drimion.targets?.[configKey] || {};
 				const target = await prompts.selectTarget(targets);
 
 				if (target) {
@@ -87,7 +87,7 @@ export const generateCommand = new Command("generate")
 			spinner.stop();
 
 			// Reconstruct filename to show in summary (mirrors Generator logic)
-			const fileName = toFileName(normalized, type, config.domion.naming);
+			const fileName = toFileName(normalized, type, config.drimion.naming);
 			const fullPath = path.join(outputPath, fileName);
 			// Make path relative to cwd for readability
 			const relativePath = path.relative(process.cwd(), fullPath);

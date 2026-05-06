@@ -72,7 +72,7 @@ export const syncCommand = new Command("sync")
 				console.log();
 				logger.hint([
 					chalk.dim(`Expected at: ${path.relative(cwd, kernelPath)}`),
-					chalk.dim("Run `npx domion init` to install first."),
+					chalk.dim("Run `npx drimion init` to install first."),
 				]);
 				console.log();
 				process.exit(0);
@@ -158,7 +158,7 @@ export const syncCommand = new Command("sync")
 					"__backup__",
 					`v${backupVersion}`,
 				);
-				const tempBackupPath = path.join(cwd, `.domion-backup-${Date.now()}`);
+				const tempBackupPath = path.join(cwd, `.drimion-backup-${Date.now()}`);
 				const relativeBackupPath = path.relative(cwd, backupPath);
 
 				// 1. Copy current kernel to a temp location outside kernelPath

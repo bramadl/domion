@@ -24,7 +24,7 @@ export class Generator {
 		const fileName = toFileName(
 			className,
 			opts.type,
-			opts.config.domion.naming,
+			opts.config.drimion.naming,
 		);
 
 		const templatePath = Generator.resolveTemplatePath(opts.type);
@@ -83,7 +83,7 @@ export class Generator {
 			className: opts.className,
 			fileName: opts.fileName,
 			type: opts.type,
-			importAlias: opts.config.domion.importAlias,
+			importAlias: opts.config.drimion.importAlias,
 			lowerName: opts.className.toLowerCase(),
 		};
 	}
