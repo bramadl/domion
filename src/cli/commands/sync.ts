@@ -19,7 +19,7 @@ function isCancelled(err: unknown): boolean {
 
 function resolveKernelSource(): string {
 	const __dirname = path.dirname(fileURLToPath(import.meta.url));
-	return path.resolve(__dirname, "..", "..", "kernel");
+	return path.resolve(__dirname, "..", "kernel");
 }
 
 /** Read the version written by `Copier.copyKernel()` into the installed kernel */
