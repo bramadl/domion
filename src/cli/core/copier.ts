@@ -10,7 +10,7 @@ export class Copier {
 	static async copyKernel(targetPath: string): Promise<void> {
 		const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-		const source = path.resolve(__dirname, "..", "..", "kernel");
+		const source = path.resolve(__dirname, "..", "kernel");
 
 		const sourceExists = await fs.pathExists(source);
 		if (!sourceExists) {
