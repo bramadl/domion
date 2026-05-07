@@ -54,7 +54,7 @@ export class Generator {
 		// IMPORTANT:
 		// After build → dist/cli/core/*
 		// templates → dist/cli/templates/*
-		return path.resolve(__dirname, "..", "templates", templateFile);
+		return path.resolve(__dirname, "templates", templateFile);
 	}
 
 	private static async loadTemplate(filePath: string): Promise<string> {
