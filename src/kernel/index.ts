@@ -71,3 +71,7 @@ export type {
 // ── Utils ──────────────────────────────────────────────────────────────────
 export { DeepFreeze, StableStringify } from "./utils/object.utils";
 export { InvalidPropsType } from "./utils/type.utils";
+
+import validator from "./libs/validator";
+
+export { validator };
