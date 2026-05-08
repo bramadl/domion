@@ -1,8 +1,8 @@
-import { BaseRepository } from "{{importAlias}}";
+import { BaseRepository, type ID, type IResult } from "@pokepulse/kernel";
 // import { {{className}} } from "./path-to-your-{{lowerName}}";
 
 export class {{className}}Repository extends BaseRepository<{{className}}> {
-  async findById(id: string): Promise<IResult<{{className}}, string>> {
+  async findById(id: ID): Promise<IResult<{{className}}, string>> {
     // implement fetch logic
     throw new Error("Method not implemented")
   }
@@ -12,12 +12,12 @@ export class {{className}}Repository extends BaseRepository<{{className}}> {
     throw new Error("Method not implemented")
   }
 
-  async delete(id: string): Promise<IResult<void, string>> {
+  async delete(id: ID): Promise<IResult<void, string>> {
     // implement delete
     throw new Error("Method not implemented")
   }
 
-  async exists(id: string): Promise<boolean> {
+  async exists(id: ID): Promise<boolean> {
     // implement existence check
     throw new Error("Method not implemented")
   }
