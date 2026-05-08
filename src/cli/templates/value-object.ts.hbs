@@ -1,4 +1,4 @@
-import { ValueObject } from "{{importAlias}}";
+import { ValueObject, validator } from "{{importAlias}}";
 
 interface {{className}}Props {
   // define props
@@ -10,7 +10,7 @@ export class {{className}} extends ValueObject<{{className}}Props> {
   }
 
   public static override isValidProps(props: {{className}}Props): boolean {
-    // use {{className}}.validator helpers if needed
+    // use validator utils or your own library
     throw new Error("Method not implemented")
   }
 }
