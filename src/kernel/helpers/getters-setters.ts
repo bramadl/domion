@@ -245,10 +245,10 @@ export abstract class GettersAndSetters<Props> {
 	 * const raw = stringVo.get('value'); // 'hello'
 	 * ```
 	 */
-	public get<Key extends keyof Props>(key: Key): Readonly<Props[Key]>;
+	public get<Key extends keyof Props>(key: Key): Props[Key];
 	public get(
 		key: "value",
-	): Readonly<"value" extends keyof Props ? Props["value"] : Props>;
+	): "value" extends keyof Props ? Props["value"] : Props;
 	/** biome-ignore lint/suspicious/noExplicitAny: TS cannot correlate overload branches with runtime narrowing. */
 	public get(key: any): any {
 		if (this.config.disableGetters) {
