@@ -20,7 +20,7 @@ export type {{className}}Metadata = {
  * Decide wether you want to use `IQuery` or `ICommand` then change the `IUseCase` usage into one of them.
  */
 export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output> {
-  async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, {{className}}Metadata>> {
+  async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, string, {{className}}Metadata>> {
     // implement use case
     throw new Error("Method not implemented")
   }
