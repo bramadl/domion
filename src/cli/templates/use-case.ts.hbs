@@ -1,15 +1,15 @@
-import type { IUseCase, IResult } from "{{importAlias}}";
+import type { IResult, IUseCase } from "{{importAlias}}";
 
-interface {{className}}Input {
-  // define input
+export type {{className}}Input = {
+  // define input - use never if no input needed
 }
 
-interface {{className}}Output {
-  // define output
+export type {{className}}Output = {
+  // define output - use never if no output needed
 }
 
-interface {{className}}Metadata {
-  // define output or assign void to the generic instead
+export type {{className}}Metadata = {
+  // define metadata - use never if no input needed or `AnyObject` for empty object
 }
 
 /**
