@@ -12,6 +12,13 @@ interface {{className}}Metadata {
   // define output or assign void to the generic instead
 }
 
+/**
+ * @note
+ * In order to avoid this TS error:
+ * `A class can only implement an object type or intersection of object types with statically known members`.
+ *
+ * Decide wether you want to use `IQuery` or `ICommand` then change the `IUseCase` usage into one of them.
+ */
 export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output> {
   async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, {{className}}Metadata>> {
     // implement use case
