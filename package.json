@@ -1,6 +1,6 @@
 {
   "name": "drimion",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Headless DDD primitives CLI for TypeScript — own your domain",
   "keywords": [
     "ddd",
