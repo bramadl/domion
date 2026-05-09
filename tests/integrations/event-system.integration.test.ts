@@ -1,10 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test";
+import { Aggregate, BrowserEventManager, EventBus, EventContext, ServerEventManager } from "../../src/kernel";
 
-import { Aggregate } from "../../src/kernel/core/aggregate";
-import { EventBus } from "../../src/kernel/events/event-bus";
-import { BrowserEventManager } from "../../src/kernel/events/browser-event-manager";
-import { ServerEventManager } from "../../src/kernel/events/server-event-manager";
-import { EventContext } from "../../src/kernel/events/event-context";
 
 // ------------------------------
 // 🧱 Test Aggregate

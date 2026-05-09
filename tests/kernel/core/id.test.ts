@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { ID } from "../../../src/kernel/core/id";
+
+import { ID } from "../../../src/kernel";
 
 describe("[Core] ID", () => {
 	describe("Static Factories", () => {

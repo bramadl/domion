@@ -1,9 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { type Adapter, type IAdapter, Result, type UID } from "../../../src/kernel";
-import { DomainError } from "../../../src/kernel/helpers/domain-error";
-import { Entity } from "../../../src/kernel/core/entity";
-import { ID } from "../../../src/kernel/core/id";
-import { ValueObject } from "../../../src/kernel/core/value-object";
+
+import {
+  DomainError,
+  Entity,
+  ID,
+  Result,
+  ValueObject,
+  type Adapter,
+  type IAdapter,
+  type UID
+} from "../../../src/kernel";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -31,8 +37,8 @@ class User extends Entity<UserProps> {
 
 	public static override isValidProps(props: UserProps): boolean {
 		return (
-			User.validator.isObject(props) &&
 			!User.validator.isNull(props) &&
+			User.validator.isObject(props) &&
 			User.validator.isString(props.name) &&
 			!User.validator.string(props.name).isEmpty()
 		);
@@ -628,6 +634,7 @@ describe("[Core] Entity", () => {
 					name: "Ash",
 					profile: { city: "Pallet", level: 1 },
 				}).value();
+
 				const adapter: Adapter<User, { displayName: string }> = {
 					adaptOne: (e) => ({ displayName: e.get("name") }),
 				};
@@ -641,6 +648,7 @@ describe("[Core] Entity", () => {
 					name: "Ash",
 					profile: { city: "Pallet", level: 1 },
 				}).value();
+
 				const adapter: IAdapter<User, { displayName: string }> = {
 					build: (e) => Result.success({ displayName: e.get("name") }),
 				};

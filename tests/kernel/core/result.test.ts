@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { Result } from "../../../src/kernel/libs/result";
-import type { ICommand } from "../../../src/kernel/types/command.types";
+
+import { Result, type ICommand } from "../../../src/kernel";
 
 describe("[Lib] Result", () => {
 	describe("Static Factories", () => {

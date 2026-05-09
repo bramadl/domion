@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BaseDomainEvent } from "../../../src/kernel/events/domain-event";
+import { BaseDomainEvent } from "../../../src/kernel/core/domain-event";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

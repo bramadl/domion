@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { type Adapter, type IAdapter, Result, type UID } from "../../../src/kernel";
-import { DomainError } from "../../../src/kernel/helpers/domain-error";
-import { ID } from "../../../src/kernel/core/id";
-import { ValueObject } from "../../../src/kernel/core/value-object";
+
+import {
+  DomainError,
+  ID,
+  Result,
+  ValueObject,
+  type Adapter,
+  type IAdapter,
+  type UID
+} from "../../../src/kernel";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -17,8 +23,8 @@ class Age extends ValueObject<AgeProps> {
 
 	public static override isValidProps(props: AgeProps): boolean {
 		return (
-			Age.validator.isObject(props) &&
 			!Age.validator.isNull(props) &&
+			Age.validator.isObject(props) &&
 			Age.validator.isNumber(props.value) &&
 			Age.validator.number(props.value).isGreaterOrEqualTo(0)
 		);

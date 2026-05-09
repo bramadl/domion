@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { DomainError } from "../../../src/kernel/helpers/domain-error";
-import { Aggregate } from "../../../src/kernel/core/aggregate";
+
+import { Aggregate, DomainError } from "../../../src/kernel";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -16,10 +16,12 @@ class Order extends Aggregate<OrderProps> {
 
 	public static override isValidProps(props: OrderProps): boolean {
 		return (
+			!Order.validator.isNull(props) &&
 			Order.validator.isObject(props) &&
 			Order.validator.isString(props.status) &&
 			!Order.validator.string(props.status).isEmpty() &&
-			Order.validator.isNumber(props.total)
+			Order.validator.isNumber(props.total) &&
+			Order.validator.number(props.total).isPositive()
 		);
 	}
 
