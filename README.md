@@ -28,6 +28,7 @@ A developer-first CLI tool for bringing Domain-Driven Design (DDD) primitives in
   - [Entity](#entity)
   - [Aggregate](#aggregate)
   - [Repository](#repository)
+  - [Specification](#specification)
   - [Use Cases](#use-cases)
 - [API Reference](#api-reference)
   - [Core API](#core-api)
@@ -83,7 +84,7 @@ Instead, it:
 Domain-Driven Design organizes code into layers of responsibility. This library provides the building blocks for the **Domain Layer** and defines the contracts for the **Application** and **Infrastructure** layers.
 
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │                  Application Layer               │
 │  Use Cases · Commands · Queries · Event Handlers │
 ├──────────────────────────────────────────────────┤
@@ -111,7 +112,6 @@ Key DDD principles this library embraces:
 | `ValueObject` | ❌ By value | ❌ Immutable | ❌           | Domain concept defined entirely by its properties      |
 | `Entity`      | ✅ By `id`  | ✅           | ❌           | Domain object with stable identity and lifecycle       |
 | `Aggregate`   | ✅ By `id`  | ✅           | ✅           | Consistency boundary; single entry point for mutations |
-| `ID`          | —           | —            | —            | Typed unique identifier (UUID or custom)               |
 
 ---
 
@@ -132,7 +132,7 @@ yarn dlx drimion init
 pnpm dlx drimion init
 
 # bun
-bunx --bun drimion init
+bun x drimion init
 ```
 
 Running `init -y` will skip interactive prompts and install defaults and:
@@ -336,20 +336,112 @@ await bus.publishAll(order.pullEvents()); // then publish
 A **Repository** is the persistence contract for an aggregate. The interface is defined in the **domain layer** and implemented in the **infrastructure layer** — keeping your domain code free of storage concerns.
 
 ```typescript
-class UserRepository extends BaseRepository<User> {
-  async findById(id: string): Promise<IResult<User, string>> {
+// defined within the domain layer as port
+interface IUserRepository extends BaseRepository<User> {
+  findById(id: UID): Promise<User | null>
+  save(user: User): Promise<void>
+  delete(id: UID): Promise<void>
+  exists(id: UID): Promise<boolean>
+}
+
+// defined within the infra layer as adapter
+class UserRepository extends IUserRepository {
+  async findById(id: string): Promise<User> {
     /* ... */
   }
-  async save(user: User): Promise<IResult<void, string>> {
+  async save(user: User): Promise<void> {
     /* ... */
   }
-  async delete(id: string): Promise<IResult<void, string>> {
+  async delete(id: string): Promise<void> {
     /* ... */
   }
   async exists(id: string): Promise<boolean> {
     /* ... */
   }
 }
+
+class DrizzleORMUserRepository extends IUserRepository {
+  async findById(id: string): Promise<User> {
+    /* ... */
+  }
+  async save(user: User): Promise<void> {
+    /* ... */
+  }
+  async delete(id: string): Promise<void> {
+    /* ... */
+  }
+  async exists(id: string): Promise<boolean> {
+    /* ... */
+  }
+}
+
+class PrismaORMUserRepository extends IUserRepository {
+  async findById(id: string): Promise<User> {
+    /* ... */
+  }
+  async save(user: User): Promise<void> {
+    /* ... */
+  }
+  async delete(id: string): Promise<void> {
+    /* ... */
+  }
+  async exists(id: string): Promise<boolean> {
+    /* ... */
+  }
+}
+```
+
+### Specification
+
+A **Specification** encapsulates a single, named business rule as a pure predicate. Instead of scattering `if` conditions across use cases and domain methods, you give each rule a name that lives in your ubiquitous language — and compose rules together without subclassing.
+
+Three scenarios where specifications belong:
+
+1. **Validation** — guard Aggregate domain methods against invalid state transitions.
+2. **In-memory selection** — filter already-loaded collections by business criteria.
+3. **Construction criteria** — express what a valid candidate must look like before building something.
+
+> ⚠️ Specifications are **not** intended to drive persistence queries. Repository methods should accept explicit parameters and delegate to the ORM/query builder directly — translating a spec into SQL couples domain rules to infrastructure.
+
+```typescript
+// Define — implement `satisfiedBy`, not `isSatisfiedBy`
+class MinimumOrderAmountSpec extends BaseSpecification<Order> {
+  constructor(private readonly minimum: number) { super(); }
+
+  protected satisfiedBy(order: Order): boolean {
+    return order.get('total') >= this.minimum;
+  }
+}
+
+class IsPaidSpec extends BaseSpecification<Order> {
+  protected satisfiedBy(order: Order): boolean {
+    return order.get('isPaid') === true;
+  }
+}
+
+class IsFraudSpec extends BaseSpecification<Order> {
+  protected satisfiedBy(order: Order): boolean {
+    return order.get('isFraud') === true;
+  }
+}
+
+// Compose — .and() / .or() / .not()
+const eligibleForShipping = new MinimumOrderAmountSpec(100)
+  .and(new IsPaidSpec())
+  .and(new IsFraudSpec().not());
+
+// Guard inside an Aggregate domain method
+ship(): void {
+  const spec = new MinimumOrderAmountSpec(100).and(new IsPaidSpec());
+  if (!spec.isSatisfiedBy(this)) {
+    throw new DomainError('Order is not eligible for shipping', { context: 'Order' });
+  }
+  this.change('status', 'shipped');
+  this.emit({ type: 'order:shipped' });
+}
+
+// In-memory selection
+const eligible = orders.filter(o => eligibleForShipping.isSatisfiedBy(o));
 ```
 
 ### Use Cases
@@ -498,6 +590,26 @@ abstract class BaseRepository<T extends Entity, ID = UID> {
 }
 ```
 
+#### Specification
+
+```typescript
+// Extend BaseSpecification<T> and implement satisfiedBy()
+class MySpec extends BaseSpecification<MyType> {
+  protected satisfiedBy(candidate: MyType): boolean { /* rule */ }
+}
+
+// Evaluate
+spec.isSatisfiedBy(candidate)  // → boolean
+
+// Compose — each returns a new ISpecification<T>
+spec.and(other)  // both must be satisfied
+spec.or(other)   // either must be satisfied
+spec.not()       // negates this spec
+
+// Chain freely
+new ASpec().and(new BSpec()).or(new CSpec().not()).and(new DSpec())
+```
+
 #### Adapters
 
 ```typescript
@@ -592,43 +704,11 @@ Thrown automatically by:
 - `init()` — `isValidProps()` returns `false`
 - Event managers — event name missing `context:EventName` format
 
-#### Iterator
-
-Bi-directional sequential traversal over a collection.
-
-```typescript
-// Create
-Iterator.create({ initialData, restartOnFinish?, returnCurrentOnReversion? })
-
-// Navigate
-iter.next()     // move forward, return item
-iter.prev()     // move backward, return item
-iter.hasNext()  // boolean
-iter.hasPrev()  // boolean
-iter.first()    // peek first item (no cursor move)
-iter.last()     // peek last item (no cursor move)
-iter.toFirst()  // reset cursor to before first item
-iter.toLast()   // reset cursor to after last item
-
-// Mutate
-iter.add(item)          // alias for addToEnd
-iter.addToEnd(item)
-iter.addToStart(item)   // resets cursor
-iter.removeFirst()
-iter.removeLast()
-iter.removeItem(item)   // by JSON equality, adjusts cursor
-iter.clear()
-
-// Export
-iter.toArray()   // copy as plain array
-iter.clone()     // new Iterator with same items and config
-iter.total()     // item count
-iter.isEmpty()   // boolean
-```
-
 #### Validators & Utils
 
 Built-in `validator` and `util` instances inherited by all domain classes, accessible as both instance and static members.
+
+
 
 **Type guards:**
 
@@ -640,6 +720,18 @@ this.validator.isArray(v)      this.validator.isObject(v)   // plain objects onl
 this.validator.isFunction(v)   this.validator.isSymbol(v)
 this.validator.isID(v)         this.validator.isEntity(v)
 this.validator.isAggregate(v)  this.validator.isValueObject(v)
+```
+
+> You can also import the instance directly from the kernel using the lowercase name exports
+
+```typescript
+// import the instance instead of using it inside class through `this` context
+import { validator, utils } from "{your-import-alias}"
+
+function myFunctionOutsideOfClass() {
+  validator.string("Some string")
+  utils.string("some string")
+}
 ```
 
 **String checks:** `hasLengthBetweenOrEqual(min, max)` · `hasLengthGreaterThan(n)` · `hasLengthLessOrEqualTo(n)` · `hasLengthEqualTo(n)` · `isEmpty()` · `hasSpecialChar()` · `hasOnlyNumbers()` · `hasOnlyLetters()` · `match(regex)` · `isEqual(str)` · `includes(str)`
@@ -663,8 +755,8 @@ Aggregate (emits) ──→ pullEvents() ──→ [ Your Transport ]
                                                │
                            ┌───────────────────┼──────────────────────┐
                            ▼                   ▼                      ▼
-                        EventBus          Redis / Kafka          Custom IEventBus
-                     (in-process)       (distributed)             (anything)
+                        EventBus          Redis / Kafka        Custom IEventBus
+                      (in-process)        (distributed)           (anything)
 ```
 
 #### Domain Event
