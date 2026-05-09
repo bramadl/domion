@@ -8,11 +8,17 @@ export type {{className}}Output = {
   // define output - use never if no output needed
 }
 
+/**
+ * @example usage with unions good for functional error handling
+ * export type {{className}}Error = UserNotFoundError | AccountLockedError
+ */
+export type {{className}}Error = string
+
 export type {{className}}Metadata = {
   // define metadata - use never if no metadata needed
 }
 
-export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output> {
+export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output, {{className}}Error> {
   public constructor() {}
   
   public async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, string, {{className}}Metadata>> {

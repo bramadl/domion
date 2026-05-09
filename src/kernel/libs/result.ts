@@ -145,7 +145,7 @@ export class Result<T = void, D = string, M = AnyObject>
 	 *
 	 * @returns `true` if the result is a failure, `false` if it is a success.
 	 */
-	public isError(): boolean {
+	public isError(): this is Result<never, D, M> {
 		return this.#isError;
 	}
 
@@ -167,7 +167,7 @@ export class Result<T = void, D = string, M = AnyObject>
 	 *
 	 * @returns `true` if the result is a success, `false` if it is a failure.
 	 */
-	public isSuccess(): boolean {
+	public isSuccess(): this is Result<T, never, M> {
 		return this.#isSuccess;
 	}
 
