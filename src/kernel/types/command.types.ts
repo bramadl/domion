@@ -7,8 +7,8 @@ import type { IResult } from "./result.types";
  * @template Input The input type.
  * @template Output The output type.
  */
-export interface ICommand<Input = void, Output = void> {
-	execute(input: Input): Promise<IResult<Output, string>>;
+export interface ICommand<Input = void, Output = void, Error = never> {
+	execute(input: Input): Promise<IResult<Output, Error>>;
 }
 
 /**
@@ -19,8 +19,8 @@ export interface ICommand<Input = void, Output = void> {
  * @template Input The query parameters type.
  * @template Output The returned data type.
  */
-export interface IQuery<Input = void, Output = void> {
-	execute(input: Input): Promise<IResult<Output, string>>;
+export interface IQuery<Input = void, Output = void, Error = never> {
+	execute(input: Input): Promise<IResult<Output, Error>>;
 }
 
 /**
@@ -32,4 +32,8 @@ export interface IQuery<Input = void, Output = void> {
  * @template Input The input type.
  * @template Output The output type.
  */
-export type IUseCase<Input = void, Output = void> = ICommand<Input, Output>;
+export type IUseCase<Input = void, Output = void, Error = never> = ICommand<
+	Input,
+	Output,
+	Error
+>;
