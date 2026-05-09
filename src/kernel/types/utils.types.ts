@@ -8,13 +8,7 @@ export type AnyObject = Record<string, unknown>;
  * @description
  * Built-in types that are excluded from recursive transformations.
  */
-export type BuiltIns = Primitive | Date | RegExp;
-
-/**
- * @description
- * Options for calculations, such as specifying precision.
- */
-export type CalcOpt = { fractionDigits: number };
+type BuiltIns = Primitive | Date | RegExp;
 
 /**
  * @description
@@ -41,14 +35,7 @@ type HasMultipleCallSignatures<
  * @description
  * Primitive types that are not recursively transformed.
  */
-export type Primitive =
-	| null
-	| undefined
-	| string
-	| number
-	| boolean
-	| symbol
-	| bigint;
+type Primitive = null | undefined | string | number | boolean | symbol | bigint;
 
 /**
  * @description

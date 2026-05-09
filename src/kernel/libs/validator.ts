@@ -1,4 +1,5 @@
 import type { Aggregate, Entity, ID, ValueObject } from "../core";
+import type { BaseSpecification } from "../core/specification";
 import type { AnyObject } from "../types/utils.types";
 import { Stringify } from "../utils/string.utils";
 
@@ -168,6 +169,18 @@ export class Validator {
 			(asciiCode >= 91 && asciiCode <= 96) ||
 			(asciiCode >= 123 && asciiCode <= 126)
 		);
+	}
+
+	/**
+	 * @description
+	 * Checks if the provided value is a `BaseSpecification` instance.
+	 *
+	 * @param props The value to check.
+	 * @returns True if the value is a Specification, false otherwise.
+	 */
+	public isSpecification(props: unknown): props is BaseSpecification<never> {
+		if (props === null || typeof props !== "object") return false;
+		return (props as AnyObject).__kind === "Specification";
 	}
 
 	/**

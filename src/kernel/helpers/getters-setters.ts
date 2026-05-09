@@ -1,16 +1,16 @@
 import { ID } from "../core/id";
+import { DomainError } from "../libs/domain-error";
 import utils, { type Utils } from "../libs/utils";
 import validator, { type Validator } from "../libs/validator";
 import type { UID } from "../types/uid.types";
 import type { AnyObject } from "../types/utils.types";
-import { DomainError } from "./domain-error";
 
 /**
  * @description
  * Discriminator indicating which domain primitive this instance belongs to.
  * Used internally to apply different mutation behaviors for `ValueObject` vs `Entity`.
  */
-export type ParentKind = "ValueObject" | "Entity";
+type ParentKind = "ValueObject" | "Entity";
 
 /**
  * @description
@@ -20,7 +20,7 @@ export type ParentKind = "ValueObject" | "Entity";
  * Disabling getters or setters can be useful when enforcing strict encapsulation
  * or building read-only / write-only domain primitives.
  */
-export interface GettersSettersConfig {
+interface GettersSettersConfig {
 	/**
 	 * @description
 	 * When `true`, calling `get()` on this instance will throw a `DomainError`.

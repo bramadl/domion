@@ -1,3 +1,4 @@
+import { Iterator } from "../helpers/iterator";
 import type { ICommand } from "../types/command.types";
 import type { IIterator } from "../types/iterator.types";
 import type {
@@ -8,7 +9,6 @@ import type {
 	IResultOption,
 } from "../types/result.types";
 import type { AnyObject } from "../types/utils.types";
-import { Iterator } from "./iterator";
 
 /**
  * @description

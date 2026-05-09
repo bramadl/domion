@@ -1,8 +1,13 @@
-import type { CalcOpt } from "../types/utils.types";
 import { DecrementTime, IncrementTime } from "../utils/date.utils";
 import { Divide, Multiply, Subtract, Sum } from "../utils/number.utils";
 import { RemoveChars, RemoveSpaces, ReplaceChars } from "../utils/string.utils";
 import validator, { type Validator } from "./validator";
+
+/**
+ * @description
+ * Options for calculations, such as specifying precision.
+ */
+type CalcOpt = { fractionDigits: number };
 
 /**
  * @description

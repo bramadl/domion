@@ -1,4 +1,4 @@
-import { DomainError } from "../helpers";
+import { DomainError } from "../libs";
 
 /**
  * @description

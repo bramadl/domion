@@ -5,7 +5,7 @@ import type { AnyObject } from "../types/utils.types";
  * @description
  * Defines the shape of data used for mapping an entity's properties.
  */
-export interface EntityAutoMapperPayload {
+interface EntityAutoMapperPayload {
 	id: string;
 	createdAt: Date;
 	updatedAt: Date;

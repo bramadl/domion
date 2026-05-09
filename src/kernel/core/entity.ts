@@ -2,8 +2,8 @@
 /** biome-ignore-all lint/complexity/noThisInStatic: Required for polymorphic `this` in base factory (DDD pattern). */
 
 import { AutoMapper } from "../helpers/auto-mapper";
-import { DomainError } from "../helpers/domain-error";
 import { GettersAndSetters } from "../helpers/getters-setters";
+import { DomainError } from "../libs/domain-error";
 import { Result } from "../libs/result";
 import type { Adapter, IAdapter } from "../types/adapter.types";
 import type {

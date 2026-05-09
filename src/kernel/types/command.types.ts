@@ -32,6 +32,4 @@ export interface IQuery<Input = void, Output = void> {
  * @template Input The input type.
  * @template Output The output type.
  */
-export type IUseCase<Input = void, Output = void> =
-	| ICommand<Input, Output>
-	| IQuery<Input, Output>;
+export type IUseCase<Input = void, Output = void> = ICommand<Input, Output>;

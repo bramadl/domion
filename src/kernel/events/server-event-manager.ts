@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+
 import type { DomainEventPayload, EventEntry } from "../types/event.types";
 import { BaseEventManager } from "./event-manager";
 import { ValidateEventName } from "./event-utils";

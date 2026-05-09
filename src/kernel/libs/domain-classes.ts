@@ -1,7 +1,7 @@
-import { Iterator } from "../libs/iterator";
-import { Result } from "../libs/result";
+import { Iterator } from "../helpers/iterator";
 import type { IIterator } from "../types/iterator.types";
 import type { IResult } from "../types/result.types";
+import { Result } from "./result";
 
 /**
  * @description
@@ -10,7 +10,7 @@ import type { IResult } from "../types/result.types";
  * Contains both an iterator over each individual creation result and a combined
  * result that reflects the overall success or failure of the batch operation.
  */
-export interface CreateManyResult {
+interface CreateManyResult {
 	/**
 	 * @description
 	 * An iterator over each individual `Result` produced during the batch creation.
