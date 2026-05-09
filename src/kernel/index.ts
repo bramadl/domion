@@ -44,6 +44,7 @@ export type {
 	ICommand,
 	IEventBus,
 	IQuery,
+	IResult,
 	ISpecification,
 	IUseCase,
 	ReadonlyDeep,
