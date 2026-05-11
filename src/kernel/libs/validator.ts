@@ -287,7 +287,7 @@ export class Validator {
 				target <= Number.MAX_SAFE_INTEGER &&
 				target >= Number.MIN_SAFE_INTEGER,
 			isPositive: (): boolean =>
-				Validator.instance.isNumber(target) && target >= 0,
+				Validator.instance.isNumber(target) && target > 0,
 			isNegative: (): boolean =>
 				Validator.instance.isNumber(target) && target < 0,
 			isEven: (): boolean =>
