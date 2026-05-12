@@ -50,7 +50,7 @@ export abstract class BaseRepository<T extends Entity<IEntityProps>, ID = UID> {
 	 * @param id The entity's unique identifier.
 	 * @returns A `Result` containing the entity if found, or an error if not.
 	 */
-	abstract findById(id: ID): Promise<IResult<T | null, string>>;
+	abstract findById(id: ID): Promise<IResult<T, string>>;
 
 	/**
 	 * @description
