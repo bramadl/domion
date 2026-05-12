@@ -21,7 +21,7 @@ export type {{className}}Metadata = {
 export class {{className}} implements IUseCase<{{className}}Input, {{className}}Output, {{className}}Error> {
   public constructor() {}
   
-  public async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, string, {{className}}Metadata>> {
+  public async execute(input: {{className}}Input): Promise<IResult<{{className}}Output, {{className}}Error, {{className}}Metadata>> {
     // implement use case
     throw new Error("Method not implemented")
   }
