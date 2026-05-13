@@ -280,7 +280,7 @@ export abstract class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * @returns `true` if valid; `false` otherwise.
 	 */
 	public static isValid(value: unknown): boolean {
-		return this.isValidProps(value);
+		return this.isValidProps(value) === undefined;
 	}
 
 	/**
@@ -300,10 +300,12 @@ export abstract class ValueObject<Props> extends GettersAndSetters<Props> {
 	 * }
 	 * ```
 	 */
-	public static isValidProps(props: unknown): boolean {
-		return (
+	public static isValidProps(props: unknown): DomainError | undefined {
+		if (
 			!ValueObject.validator.isUndefined(props) &&
 			!ValueObject.validator.isNull(props)
-		);
+		) {
+			return new DomainError("props must not be null or undefined");
+		}
 	}
 }

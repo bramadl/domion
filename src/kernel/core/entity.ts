@@ -321,7 +321,7 @@ export abstract class Entity<
 	 * @description Alias for `isValidProps()`.
 	 */
 	public static isValid(value: unknown): boolean {
-		return this.isValidProps(value);
+		return this.isValidProps(value) === undefined;
 	}
 
 	/**
@@ -333,10 +333,10 @@ export abstract class Entity<
 	 * @param props The props to validate.
 	 * @returns `true` if valid; `false` otherwise.
 	 */
-	public static isValidProps(props: unknown): boolean {
-		return (
-			!Entity.validator.isUndefined(props) && !Entity.validator.isNull(props)
-		);
+	public static isValidProps(props: unknown): DomainError | undefined {
+		if (Entity.validator.isUndefined(props) || Entity.validator.isNull(props)) {
+			return new DomainError("props must not be null or undefined");
+		}
 	}
 
 	private static isPlainProps(props: unknown): props is AnyObject {

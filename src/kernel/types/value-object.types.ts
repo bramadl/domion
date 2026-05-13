@@ -1,3 +1,5 @@
+import type { DomainError } from "../libs";
+
 /**
  * @description
  * Represents the static side (constructor + factory contract) of a `ValueObject` subclass.
@@ -6,7 +8,7 @@
  * @template T The concrete `ValueObject` subclass type.
  */
 export type ValueObjectConstructor<Props, T> = {
-	isValidProps(props: Props): boolean;
+	isValidProps(props: Props): DomainError | undefined;
 	readonly name: string;
 	prototype: T;
 };

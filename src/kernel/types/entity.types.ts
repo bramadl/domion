@@ -1,3 +1,4 @@
+import type { DomainError } from "../libs";
 import type { UID } from "./uid.types";
 
 /**
@@ -11,7 +12,7 @@ import type { UID } from "./uid.types";
  * @template T The concrete `Aggregate` subclass type.
  */
 export type AggregateConstructor<Props extends object, T> = {
-	isValidProps(props: Props): boolean;
+	isValidProps(props: Props): DomainError | undefined;
 	readonly name: string;
 	prototype: T;
 };
@@ -28,7 +29,7 @@ export type AggregateConstructor<Props extends object, T> = {
  * @template T The concrete `Entity` subclass type.
  */
 export type EntityConstructor<Props extends object, T> = {
-	isValidProps(props: Props): boolean;
+	isValidProps(props: Props): DomainError | undefined;
 	readonly name: string;
 	prototype: T;
 };

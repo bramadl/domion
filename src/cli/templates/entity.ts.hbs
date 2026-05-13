@@ -1,4 +1,4 @@
-import { Entity, validator as v } from "{{importAlias}}";
+import { DomainError, Entity, validator as v } from "{{importAlias}}";
 
 interface {{className}}Props {
   // define props
@@ -9,7 +9,7 @@ export class {{className}} extends Entity<{{className}}Props> {
     super(props);
   }
 
-  public static override isValidProps(props: {{className}}Props): boolean {
+  public static override isValidProps(props: {{className}}Props): DomainError | undefined {
     // use validator utils or your own library
     throw new Error("Method not implemented")
   }
