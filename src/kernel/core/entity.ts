@@ -273,15 +273,10 @@ export abstract class Entity<
 	public static create<Props extends object, T extends Entity<Props>>(
 		this: EntityConstructor<Props, T>,
 		props: EntityProps<Props>,
-	): IResult<T, string> {
-		if (!this.isValidProps(props)) {
-			return Result.error(
-				`Invalid props for ${this.name}: failed domain validation.`,
-			);
-		}
-
-		const instance = new (this as any)(props);
-		return Result.success(instance);
+	): IResult<T, DomainError> {
+		const error = this.isValidProps(props);
+		if (error) return Result.error(error);
+		return Result.success(new (this as any)(props));
 	}
 
 	/**
@@ -309,12 +304,9 @@ export abstract class Entity<
 		this: EntityConstructor<Props, T>,
 		props: EntityProps<Props>,
 	): T {
-		if (!this.isValidProps(props)) {
-			throw new DomainError(`Init: invalid props.`, { context: this.name });
-		}
-
-		const instance = new (this as any)(props);
-		return instance;
+		const error = this.isValidProps(props);
+		if (error) throw error;
+		return new (this as any)(props);
 	}
 
 	/**
