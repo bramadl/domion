@@ -3,7 +3,7 @@
 ![version](https://img.shields.io/npm/v/drimion?label=version)
 ![license](https://img.shields.io/npm/l/drimion)
 
-**Headless DDD primitives CLI for TypeScript**
+## Headless DDD primitives CLI for TypeScript**
 
 A developer-first CLI tool for bringing Domain-Driven Design (DDD) primitives into any TypeScript project — copy the primitives, shape your architecture, and keep full control.
 
@@ -83,7 +83,7 @@ Instead, it:
 
 Domain-Driven Design organizes code into layers of responsibility. This library provides the building blocks for the **Domain Layer** and defines the contracts for the **Application** and **Infrastructure** layers.
 
-```
+```none
 ┌──────────────────────────────────────────────────┐
 │                  Application Layer               │
 │  Use Cases · Commands · Queries · Event Handlers │
@@ -212,7 +212,7 @@ npx drimion generate entity --name=User --target=user
 
 This library is **headless** — it does not enforce any folder structure. Below is a suggestion based on DDD conventions:
 
-```
+```bash
 src/
 ├── lib/
 │   └── drimion/        ← library source lives here (yours to modify)
@@ -257,11 +257,16 @@ Use value objects to model domain concepts like `Money`, `Email`, `Address`, `Da
 
 ```typescript
 class Money extends ValueObject<MoneyProps> {
-  public static isValidProps({ amount, currency }: MoneyProps): boolean {
-    return (
-      this.validator.number(amount).isPositive() &&
-      this.validator.string(currency).hasLengthEqualTo(3)
-    );
+  public static isValidProps({ amount, currency }: MoneyProps): DomainError | undefined {
+    if (!this.validator.number(amount).isPositive()) {
+      return new DomainError("Amount must be positive", { field: "amount" });
+    }
+
+    if (!this.validator.string(currency).hasLengthEqualTo(3)) {
+      return new DomainError("Currency must be a 3-letter ISO code", {
+        field: "currency",
+      });
+    }
   }
 
   public add(other: Money): Money {
@@ -283,11 +288,14 @@ Use entities to model domain objects that have a lifecycle: `User`, `Product`, `
 
 ```typescript
 class User extends Entity<UserProps> {
-  public static isValidProps(props: UserProps): boolean {
-    return (
-      this.validator.isString(props.name) &&
-      this.validator.isString(props.email)
-    );
+  public static isValidProps(props: UserProps): DomainError | undefined {
+    if (!this.validator.isString(props.name)) {
+      return new DomainError("Name must be a string", { field: "name" });
+    }
+
+    if (!this.validator.isString(props.email)) {
+      return new DomainError("Email must be a string", { field: "email" });
+    }
   }
 
   public rename(name: string): void {
@@ -480,7 +488,7 @@ class GetOrderUseCase implements IQuery<string, Order> {
 
 ### Core API
 
-#### ID
+#### Usage: ID
 
 ```typescript
 // Create
@@ -504,7 +512,7 @@ id.cloneAsNew(); // same value, isNew() → true
 id.createdAt(); // Date this ID instance was created
 ```
 
-#### Value Object
+#### Usage: Value Object
 
 ```typescript
 // Factory
@@ -524,11 +532,11 @@ vo.isEqual(other)  // structural equality by value
 vo.clone(props?)   // new instance, optionally with overrides
 
 // Override in subclass
-static isValidProps(props): boolean  // construction validation
+static isValidProps(props): DomainError | undefined  // construction validation
 validation(value, key): boolean      // per-key invariant on change()
 ```
 
-#### Entity
+#### Usage: Entity
 
 ```typescript
 // Factory
@@ -557,7 +565,7 @@ entity.isEqual(other)   // same class + same id + same props
 entity.clone(props?)    // new instance with same id, optionally with overrides
 ```
 
-#### Aggregate
+#### Usage: Aggregate
 
 Inherits all Entity API, plus:
 
@@ -579,7 +587,7 @@ aggregate.clone({ ...props, withEvents: true }) // carry events over
 aggregate.hashCode() // '[Aggregate@ClassName]:uuid'
 ```
 
-#### Repository
+#### Usage: Repository
 
 ```typescript
 abstract class BaseRepository<T extends Entity, ID = UID> {
@@ -590,7 +598,7 @@ abstract class BaseRepository<T extends Entity, ID = UID> {
 }
 ```
 
-#### Specification
+#### Usage: Specification
 
 ```typescript
 // Extend BaseSpecification<T> and implement satisfiedBy()
@@ -708,8 +716,6 @@ Thrown automatically by:
 
 Built-in `validator` and `util` instances inherited by all domain classes, accessible as both instance and static members.
 
-
-
 **Type guards:**
 
 ```typescript
@@ -750,7 +756,7 @@ function myFunctionOutsideOfClass() {
 
 The Event System is a **standalone, portable package** — completely decoupled from your domain model. The `Aggregate` only collects events via `emit()`; it has no awareness of how those events get delivered.
 
-```
+```none
 Aggregate (emits) ──→ pullEvents() ──→ [ Your Transport ]
                                                │
                            ┌───────────────────┼──────────────────────┐
@@ -923,7 +929,7 @@ List all available code generators.
 npx drimion list
 ```
 
-```
+```none
 Available generators:
 
 • entity        → Domain entity with identity and lifecycle
@@ -992,7 +998,7 @@ npx drimion sync -f  # force overwrite — no prompts, no backup
 
 When a new version is detected, you are prompted:
 
-```
+```none
 A new version of library kernel is available.
 
 What do you want to do?
@@ -1004,7 +1010,7 @@ What do you want to do?
 
 Choosing option 3 moves your current files to:
 
-```
+```none
 src/lib/drimion/__backup__/vX.X.X
 ```
 
@@ -1012,7 +1018,7 @@ This way, you can safely resolve your own changes to the newest version availabl
 
 > ⚠️ Add the backup directory to `.gitignore`:
 >
-> ```
+> ```none
 > src/lib/drimion/__backup__/
 > ```
 
